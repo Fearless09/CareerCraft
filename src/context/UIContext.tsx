@@ -18,7 +18,11 @@ interface UIContextType {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   toasts: Toast[];
-  addToast: (message: string, type?: "success" | "error" | "info") => void;
+  addToast: (
+    message: string,
+    type?: "success" | "error" | "info",
+    timeOut?: number,
+  ) => void;
   dismissToast: (id: string) => void;
   mobilePreviewActive: boolean;
   setMobilePreviewActive: (active: boolean) => void;
@@ -37,14 +41,18 @@ export function UIProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addToast = useCallback(
-    (message: string, type: "success" | "error" | "info" = "info") => {
+    (
+      message: string,
+      type: "success" | "error" | "info" = "info",
+      timeOut: number = 5000,
+    ) => {
       const id = Math.random().toString(36).substring(2, 9);
       setToasts((prev) => [...prev, { id, message, type }]);
 
       // Auto-dismiss after 4 seconds
       setTimeout(() => {
         dismissToast(id);
-      }, 4000);
+      }, timeOut);
     },
     [dismissToast],
   );

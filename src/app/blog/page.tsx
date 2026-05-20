@@ -1,163 +1,200 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { blogPosts } from '../../data/blog';
-import { useProgress } from '../../context/ProgressContext';
-import { Search, Calendar, Clock, BookOpen, MessageSquare, Tag, Eye } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { Fragment, useState } from "react";
+import Link from "next/link";
+import { blogPosts, getPostCatColor } from "../../data/blog";
+import { useProgress } from "../../context/ProgressContext";
+import {
+  Search,
+  Calendar,
+  Clock,
+  BookOpen,
+  MessageSquare,
+  Tag,
+  Eye,
+} from "lucide-react";
+import { cn } from "../../lib/utils";
+
+const categories = ["All", ...new Set(blogPosts.map((b) => b.category))];
 
 export default function BlogListingPage() {
   const { progress } = useProgress();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-
-  const categories = ['All', 'Resume', 'Interview', 'Negotiation', 'Job Search'];
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
   const filteredPosts = blogPosts.filter((post) => {
-    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          post.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = selectedCategory === 'All' || post.category === selectedCategory;
+    const matchesSearch =
+      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory =
+      selectedCategory === "All" || post.category === selectedCategory;
 
     return matchesSearch && matchesCategory;
   });
 
   return (
-    <div className="flex-1 w-full max-w-6xl mx-auto px-6 py-12 md:py-16">
-      
+    <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-12 md:py-16">
       {/* Header */}
-      <div className="text-center max-w-2xl mx-auto mb-12">
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-xs font-semibold text-accent mb-4">
-          <MessageSquare className="w-3.5 h-3.5 animate-pulse" />
+      <header id="header" className="mx-auto mb-12 max-w-2xl text-center">
+        <span className="bg-accent/10 border-accent/10 text-accent mb-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold">
+          <MessageSquare className="size-3.5 animate-pulse" />
           Hiring Market Insights
         </span>
-        <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-primary mb-4 leading-tight">
+
+        <h1 className="font-display text-primary mb-4 text-3xl leading-tight font-extrabold sm:text-4xl">
           The CareerCraft Blog
         </h1>
-        <p className="text-zinc-500 text-sm leading-relaxed">
-          Stay ahead of current hiring trends. Read guides, interview tactics, resume optimization checks, and salary negotiation formulas written for 2026 job seekers.
+        <p className="text-sm leading-relaxed text-zinc-500">
+          Stay ahead of current hiring trends. Read guides, interview tactics,
+          resume optimization checks, and salary negotiation formulas written
+          for 2026 job seekers.
         </p>
-      </div>
+      </header>
 
       {/* Search & Categories Bar */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 bg-white border border-zinc-150 rounded-2xl p-6 shadow-sm">
-        
+      <main
+        id="filters"
+        className="mb-12 flex flex-col items-center justify-between gap-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow md:flex-row"
+      >
         {/* Search */}
         <div className="relative w-full md:max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
+          <Search className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-zinc-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search articles..."
-            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-zinc-250 bg-zinc-50 text-xs text-primary focus:outline-none focus:border-primary font-body"
+            className="text-primary font-body transition-300 w-full rounded-xl border border-zinc-200 bg-zinc-50 py-2.5 pr-4 pl-11 text-xs shadow-sm focus:border-zinc-400 focus:outline-none"
           />
         </div>
 
         {/* Categories */}
-        <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto justify-start md:justify-end">
+        <div className="flex w-full flex-wrap items-center justify-start gap-2 md:w-auto md:justify-end">
           {categories.map((cat) => (
             <button
               key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              onClick={() => {
+                if (cat === selectedCategory) return;
+                setSelectedCategory(cat);
+              }}
               className={cn(
-                'px-4 py-2 rounded-xl text-[10px] uppercase font-bold border tracking-wider transition-all duration-150',
-                selectedCategory === cat
-                  ? 'bg-primary text-white border-primary shadow-sm'
-                  : 'bg-white border-zinc-250 text-zinc-650 hover:bg-zinc-100 hover:border-zinc-300'
+                "transition-300 cursor-pointer rounded-xl border border-zinc-200 bg-white px-4 py-2 text-[10px] font-bold tracking-wider text-zinc-600 uppercase hover:border-zinc-300 hover:bg-zinc-100",
+                {
+                  "bg-primary border-primary hover:bg-primary/90 hover:border-primary text-white shadow-sm":
+                    selectedCategory === cat,
+                },
               )}
             >
               {cat}
             </button>
           ))}
         </div>
-
-      </div>
+      </main>
 
       {/* Blog Cards Grid */}
       {filteredPosts.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-zinc-150 rounded-2xl shadow-sm max-w-md mx-auto">
-          <BookOpen className="w-10 h-10 text-zinc-300 mx-auto mb-4" />
-          <h3 className="font-display font-bold text-lg text-primary mb-2">No articles found</h3>
-          <p className="text-zinc-450 text-xs px-6">
-            We couldn&apos;t find any articles matching your search query. Try keywords like &quot;STAR&quot;, &quot;negotiation&quot;, or &quot;resume&quot;.
+        <main
+          id="no-post-found"
+          className="mx-auto max-w-md rounded-2xl border border-zinc-200 bg-white px-5 py-16 text-center shadow"
+        >
+          <BookOpen className="mx-auto mb-4 size-10 text-zinc-300" />
+          <h3 className="font-display text-primary mb-2 text-lg font-bold">
+            No articles found
+          </h3>
+          <p className="px-6 text-xs text-zinc-500">
+            We couldn&apos;t find any articles, matching your search query. Try
+            keywords like{" "}
+            {categories.slice(1, 5).map((cat, indx, arr) => (
+              <Fragment key={indx}>
+                {cat}
+                {indx === arr.length - 2
+                  ? " or "
+                  : indx < arr.length - 1
+                    ? ", "
+                    : ""}
+              </Fragment>
+            ))}
+            .
           </p>
-        </div>
+        </main>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
+        <section id="posts" className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {filteredPosts.map((post) => {
             const isRead = progress.blogArticlesRead.includes(post.slug);
             return (
               <article
                 key={post.slug}
-                className="flex flex-col p-6 sm:p-8 rounded-2xl border border-zinc-150 bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                className="transition-300 flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow hover:-translate-y-0.5 hover:shadow-md sm:p-8"
               >
                 {/* Meta details */}
-                <div className="flex justify-between items-center gap-4 mb-4">
-                  <span className={cn(
-                    'inline-flex items-center gap-1 text-[9px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-md border',
-                    {
-                      'bg-indigo-50 border-indigo-100 text-indigo-700': post.category === 'Resume',
-                      'bg-rose-50 border-rose-100 text-rose-700': post.category === 'Interview',
-                      'bg-emerald-50 border-emerald-100 text-emerald-700': post.category === 'Negotiation',
-                      'bg-sky-50 border-sky-100 text-sky-700': post.category === 'Job Search',
-                    }
-                  )}>
-                    <Tag className="w-3 h-3" />
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[9px] font-extrabold tracking-wider uppercase",
+                      getPostCatColor(post.category),
+                    )}
+                  >
+                    <Tag className="size-3" />
                     {post.category}
                   </span>
-                  
+
                   {isRead && (
                     <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
-                      <Eye className="w-3.5 h-3.5" />
+                      <Eye className="size-3.5" />
                       Read
                     </span>
                   )}
                 </div>
 
                 {/* Title */}
-                <h2 className="font-display font-bold text-xl text-primary mb-3 hover:text-accent transition-colors leading-snug">
-                  <Link href={`/blog/${post.slug}`}>
-                    {post.title}
-                  </Link>
-                </h2>
+                <Link
+                  className="font-display text-primary hover:text-accent transition-300 mb-3 text-xl leading-snug font-bold"
+                  href={`/blog/${post.slug}`}
+                >
+                  {post.title}
+                </Link>
 
                 {/* Excerpt */}
-                <p className="text-zinc-500 text-xs leading-relaxed mb-6 flex-1 font-body">
+                <p className="font-body mb-6 flex-1 text-xs leading-relaxed text-zinc-500">
                   {post.excerpt}
                 </p>
 
                 {/* Footer details */}
-                <div className="flex items-center justify-between border-t border-zinc-100 pt-5">
+                <div className="flex items-center justify-between border-t border-zinc-100 pt-4">
                   <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-full bg-zinc-200 border border-zinc-300 flex items-center justify-center font-bold text-xs text-primary font-display">
-                      {post.author.name.split(' ').map((n) => n[0]).join('')}
+                    <span className="text-primary font-display flex size-8.5 items-center justify-center rounded-full border border-zinc-300 bg-zinc-200 text-xs font-bold uppercase">
+                      {post.author.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
                     </span>
-                    <div className="text-[10px] font-semibold leading-relaxed">
-                      <span className="block text-primary font-bold">{post.author.name}</span>
-                      <span className="block text-zinc-400">{post.author.role}</span>
+                    <div className="font-semibold">
+                      <span className="text-primary block text-xs font-bold">
+                        {post.author.name}
+                      </span>
+                      <span className="block text-[10px] text-zinc-500">
+                        {post.author.role}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 text-[10px] text-zinc-400 font-medium">
+                  <div className="flex items-center gap-4 text-[10px] font-medium text-zinc-500">
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
+                      <Calendar className="size-3.5" />
                       {post.publishDate}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
+                      <Clock className="size-3.5" />
                       {post.readTime}
                     </span>
                   </div>
                 </div>
-
               </article>
             );
           })}
-        </div>
+        </section>
       )}
-
     </div>
   );
 }

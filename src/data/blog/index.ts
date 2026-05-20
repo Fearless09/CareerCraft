@@ -13,6 +13,25 @@ export interface BlogPost {
   content: string; // Markdown formatted content
 }
 
+export const getPostCatColor = (
+  cat: "Resume" | "Interview" | "Career" | "Job Search" | "Negotiation",
+) => {
+  switch (cat) {
+    case "Career":
+      return "border-accent/15 bg-accent/10 text-accent";
+    case "Interview":
+      return "border-rose-100 bg-rose-50 text-rose-700";
+    case "Job Search":
+      return "border-sky-100 bg-sky-50 text-sky-700";
+    case "Negotiation":
+      return "border-emerald-100 bg-emerald-50 text-emerald-700";
+    case "Resume":
+      return "border-indigo-100 bg-indigo-50 text-indigo-700";
+    default:
+      return "border-primary/15 bg-primary/10 text-primary";
+  }
+};
+
 export const blogPosts: BlogPost[] = [
   {
     slug: "resume-mistakes-2026",

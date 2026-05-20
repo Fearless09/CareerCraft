@@ -1,25 +1,44 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { practiceQuestions, PracticeQuestion } from '../../data/practiceQuestions';
-import { useProgress } from '../../context/ProgressContext';
-import { useUI } from '../../context/UIContext';
-import { Star, Eye, EyeOff, CheckCircle, RotateCcw, AlertCircle, HelpCircle } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { useState } from "react";
+import { practiceQuestions } from "../../data/practiceQuestions";
+import { useProgress } from "../../context/ProgressContext";
+import { useUI } from "../../context/UIContext";
+import {
+  Star,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  RotateCcw,
+  AlertCircle,
+  HelpCircle,
+} from "lucide-react";
+import { cn } from "../../lib/utils";
+
+const categories = [
+  "All",
+  ...new Set(practiceQuestions.map((q) => q.category)),
+  "Bookmarked",
+];
 
 export default function InterviewPracticePage() {
-  const { progress, markQuestionAnswered, toggleBookmark, resetPracticeProgress } = useProgress();
+  const {
+    progress,
+    markQuestionAnswered,
+    toggleBookmark,
+    resetPracticeProgress,
+  } = useProgress();
   const { addToast } = useUI();
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [revealedAnswers, setRevealedAnswers] = useState<Record<string, boolean>>({});
-
-  const categories = ['All', 'General', 'Behavioral', 'Situational', 'Strengths & Weaknesses', 'Remote Work', 'Bookmarked'];
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [revealedAnswers, setRevealedAnswers] = useState<
+    Record<string, boolean>
+  >({});
 
   const filteredQuestions = practiceQuestions.filter((q) => {
-    if (selectedCategory === 'Bookmarked') {
+    if (selectedCategory === "Bookmarked") {
       return progress.bookmarkedQuestions.includes(q.id);
     }
-    if (selectedCategory === 'All') return true;
+    if (selectedCategory === "All") return true;
     return q.category === selectedCategory;
   });
 
@@ -29,87 +48,114 @@ export default function InterviewPracticePage() {
 
   const handleMarkAnswered = (id: string) => {
     markQuestionAnswered(id);
-    addToast('Question marked as practiced!', 'success');
+    addToast("Question marked as practiced!", "success");
   };
 
   const handleToggleBookmark = (id: string) => {
     toggleBookmark(id);
     const isBookmarked = progress.bookmarkedQuestions.includes(id);
-    addToast(isBookmarked ? 'Bookmark removed' : 'Question bookmarked!', 'info');
+    addToast(
+      isBookmarked ? "Bookmark removed" : "Question bookmarked!",
+      "info",
+    );
   };
 
   const handleReset = () => {
-    const idsToReset = selectedCategory === 'All' || selectedCategory === 'Bookmarked'
-      ? undefined
-      : practiceQuestions.filter((q) => q.category === selectedCategory).map((q) => q.id);
-    
+    const idsToReset =
+      selectedCategory === "All" || selectedCategory === "Bookmarked"
+        ? undefined
+        : practiceQuestions
+            .filter((q) => q.category === selectedCategory)
+            .map((q) => q.id);
+
     resetPracticeProgress(idsToReset);
-    addToast('Practice progress reset successfully!', 'info');
+    addToast("Practice progress reset successfully!", "info");
   };
 
   // Progress Calculation
-  const totalCount = selectedCategory === 'Bookmarked'
-    ? progress.bookmarkedQuestions.length
-    : selectedCategory === 'All'
-      ? practiceQuestions.length
-      : practiceQuestions.filter((q) => q.category === selectedCategory).length;
+  const totalCount =
+    selectedCategory === "Bookmarked"
+      ? progress.bookmarkedQuestions.length
+      : selectedCategory === "All"
+        ? practiceQuestions.length
+        : practiceQuestions.filter((q) => q.category === selectedCategory)
+            .length;
 
-  const answeredInScope = selectedCategory === 'Bookmarked'
-    ? progress.bookmarkedQuestions.filter((id) => progress.practiceQuestionsAnswered.includes(id)).length
-    : selectedCategory === 'All'
-      ? progress.practiceQuestionsAnswered.length
-      : practiceQuestions.filter((q) => q.category === selectedCategory && progress.practiceQuestionsAnswered.includes(q.id)).length;
+  const answeredInScope =
+    selectedCategory === "Bookmarked"
+      ? progress.bookmarkedQuestions.filter((id) =>
+          progress.practiceQuestionsAnswered.includes(id),
+        ).length
+      : selectedCategory === "All"
+        ? progress.practiceQuestionsAnswered.length
+        : practiceQuestions.filter(
+            (q) =>
+              q.category === selectedCategory &&
+              progress.practiceQuestionsAnswered.includes(q.id),
+          ).length;
 
-  const progressPercent = totalCount > 0 ? (answeredInScope / totalCount) * 100 : 0;
+  const progressPercent =
+    totalCount > 0 ? (answeredInScope / totalCount) * 100 : 0;
 
   return (
-    <div className="flex-1 w-full max-w-5xl mx-auto px-6 py-12 md:py-16">
-      
+    <section className="wrapper max-w-5xl flex-1 py-12 md:py-16">
       {/* Header */}
-      <div className="text-center max-w-2xl mx-auto mb-12">
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-xs font-semibold text-accent mb-4">
-          <HelpCircle className="w-3.5 h-3.5 animate-pulse" />
+      <header id="header" className="mx-auto mb-12 max-w-2xl text-center">
+        <span className="bg-accent/10 border-accent/10 text-accent mb-4 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm">
+          <HelpCircle className="size-3.75 animate-pulse" />
           Interactive Trainer
         </span>
-        <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-primary mb-4 leading-tight">
+
+        <h1 className="font-display text-primary mb-4 text-3xl leading-tight font-extrabold sm:text-4xl">
           STAR Interview Q&A Flashcards
         </h1>
-        <p className="text-zinc-500 text-sm leading-relaxed">
-          Drill common and tough interview questions. Study structurally indexed STAR replies, bookmark key flashcards, and track your overall practice progress.
+        <p className="text-base leading-relaxed text-zinc-500">
+          Drill common and tough interview questions. Study structurally indexed
+          STAR replies, bookmark key flashcards, and track your overall practice
+          progress.
         </p>
-      </div>
+      </header>
 
       {/* Categories Tab navigation */}
-      <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
-        {categories.map((cat) => {
-          const isSelected = selectedCategory === cat;
-          return (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={cn(
-                'px-4 py-2 rounded-xl text-xs font-semibold border transition-all duration-150',
-                isSelected
-                  ? 'bg-primary text-white border-primary shadow-sm'
-                  : 'bg-white border-zinc-200 text-zinc-650 hover:bg-zinc-100 hover:border-zinc-300'
-              )}
-            >
-              {cat}
-            </button>
-          );
-        })}
-      </div>
+      <main
+        id="categories"
+        className="mb-8 flex flex-wrap items-center justify-center gap-2"
+      >
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => {
+              if (cat === selectedCategory) return;
+              setSelectedCategory(cat);
+            }}
+            className={cn(
+              "transition-300 cursor-pointer rounded-xl border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100",
+              {
+                "bg-primary border-primary hover:bg-primary/90 hover:border-primary text-white shadow-sm":
+                  cat === selectedCategory,
+              },
+            )}
+          >
+            {cat}
+          </button>
+        ))}
+      </main>
 
       {/* Progress & Control Card */}
-      <div className="bg-white border border-zinc-150 rounded-2xl p-6 mb-10 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6 animate-fade-in">
+      <main
+        id="progress-card"
+        className="mb-10 flex flex-col items-center justify-between gap-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow sm:flex-row"
+      >
         <div className="w-full sm:w-2/3">
-          <div className="flex justify-between items-center text-xs font-bold text-primary mb-2 uppercase tracking-wider">
+          <div className="text-primary mb-2 flex items-center justify-between text-xs font-bold tracking-wider uppercase">
             <span>{selectedCategory} progress</span>
-            <span>{answeredInScope} / {totalCount} practiced</span>
+            <span>
+              {answeredInScope} / {totalCount} practiced
+            </span>
           </div>
-          <div className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden border border-zinc-200">
+          <div className="h-2.5 w-full overflow-hidden rounded-full border border-zinc-200 bg-zinc-100 shadow-sm">
             <div
-              className="bg-accent h-full transition-all duration-300 ease-out"
+              className="bg-accent transition-300 h-full rounded-full"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -119,87 +165,103 @@ export default function InterviewPracticePage() {
           onClick={handleReset}
           disabled={answeredInScope === 0}
           className={cn(
-            'flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 w-full sm:w-auto justify-center',
-            answeredInScope > 0
-              ? 'bg-zinc-100 text-zinc-600 border border-zinc-250 hover:bg-zinc-200 hover:text-zinc-700'
-              : 'bg-zinc-50 text-zinc-300 border border-zinc-100 cursor-not-allowed'
+            "transition-300 flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-zinc-100 px-4 py-2.5 text-xs font-semibold text-zinc-400 sm:w-auto",
+            {
+              "cursor-pointer border-zinc-200 bg-zinc-100 text-zinc-600 shadow hover:bg-zinc-200 hover:text-zinc-700":
+                answeredInScope > 0,
+            },
           )}
         >
-          <RotateCcw className="w-3.5 h-3.5" />
+          <RotateCcw className="h-3.5 w-3.5" />
           Reset progress
         </button>
-      </div>
+      </main>
 
       {/* Questions Stack */}
       {filteredQuestions.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-zinc-150 rounded-2xl shadow-sm max-w-md mx-auto">
-          <AlertCircle className="w-10 h-10 text-zinc-300 mx-auto mb-4" />
-          <h3 className="font-display font-bold text-lg text-primary mb-2">No questions found</h3>
-          <p className="text-zinc-450 text-sm px-6">
-            {selectedCategory === 'Bookmarked' 
-              ? 'You haven\'t bookmarked any interview questions yet. Star some questions to see them here!'
-              : 'Choose a different filter category to get started.'}
+        <main
+          id="no-questions-found"
+          className="mx-auto max-w-md rounded-2xl border border-zinc-200 bg-white px-5 py-16 text-center shadow"
+        >
+          <AlertCircle className="mx-auto mb-4 size-10 text-zinc-300" />
+          <h3 className="font-display text-primary mb-2 text-lg font-bold">
+            No questions found
+          </h3>
+          <p className="px-6 text-sm text-zinc-500">
+            {selectedCategory === "Bookmarked"
+              ? "You haven't bookmarked any interview questions yet. Star some questions to see them here!"
+              : "Choose a different filter category to get started."}
           </p>
-        </div>
+        </main>
       ) : (
-        <div className="flex flex-col gap-6 md:gap-8 animate-fade-in">
+        <section id="questions-stack" className="space-y-6 md:space-y-8">
           {filteredQuestions.map((q) => {
-            const isAnswered = progress.practiceQuestionsAnswered.includes(q.id);
+            const isAnswered = progress.practiceQuestionsAnswered.includes(
+              q.id,
+            );
             const isBookmarked = progress.bookmarkedQuestions.includes(q.id);
             const isRevealed = !!revealedAnswers[q.id];
 
             return (
-              <div
+              <article
                 key={q.id}
                 className={cn(
-                  'bg-white border rounded-2xl p-6 sm:p-8 shadow-sm transition-all duration-200',
-                  isAnswered ? 'border-zinc-200 bg-zinc-50/20' : 'border-zinc-150'
+                  "transition-300 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8",
+                  { "border-accent/20 bg-zinc-50": isAnswered },
                 )}
               >
                 {/* Header card meta */}
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <span className="text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-1 rounded-md bg-zinc-100 border border-zinc-200 text-zinc-650">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <span className="rounded-md border border-zinc-200 bg-zinc-100 px-2.5 py-1 text-[10px] font-extrabold tracking-wider text-zinc-600 uppercase">
                     {q.category}
                   </span>
-                  
+
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleToggleBookmark(q.id)}
                       className={cn(
-                        'p-1.5 rounded-lg border transition-colors duration-150',
-                        isBookmarked 
-                          ? 'bg-amber-50 border-amber-200 text-amber-500 hover:bg-amber-100' 
-                          : 'bg-white border-zinc-200 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600'
+                        "transition-300 cursor-pointer rounded-lg border border-zinc-200 bg-white p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600",
+                        {
+                          "border-amber-200 bg-amber-50 text-amber-500 hover:bg-amber-100 hover:text-amber-500":
+                            isBookmarked,
+                        },
                       )}
                       aria-label="Bookmark question"
                     >
-                      <Star className={cn('w-4 h-4', isBookmarked && 'fill-amber-500')} />
+                      <Star
+                        className={cn("size-4", {
+                          "fill-amber-500": isBookmarked,
+                        })}
+                      />
                     </button>
-                    
+
                     <button
                       onClick={() => handleMarkAnswered(q.id)}
                       disabled={isAnswered}
                       className={cn(
-                        'p-1.5 rounded-lg border transition-colors duration-150',
-                        isAnswered
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-600 cursor-default'
-                          : 'bg-white border-zinc-200 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600'
+                        "transition-300 cursor-pointer rounded-lg border border-zinc-200 bg-white p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600",
+                        {
+                          "cursor-default border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600":
+                            isAnswered,
+                        },
                       )}
                       aria-label="Mark practiced"
                     >
-                      <CheckCircle className="w-4 h-4" />
+                      <CheckCircle className="size-4" />
                     </button>
                   </div>
                 </div>
 
                 {/* Question Prompt */}
-                <h3 className="font-display font-bold text-lg sm:text-xl text-primary mb-4 leading-snug">
+                <h3 className="font-display text-primary mb-4 text-lg leading-snug font-bold sm:text-xl">
                   {q.question}
                 </h3>
 
                 {/* Quick Hint Card */}
-                <div className="bg-zinc-50 border border-zinc-150 rounded-xl p-4 mb-6 text-xs text-zinc-500 leading-relaxed font-body">
-                  <span className="font-bold text-primary block mb-1">Preparation Hint:</span>
+                <div className="font-body mb-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-xs leading-relaxed text-zinc-500 shadow">
+                  <span className="text-primary mb-1 block font-bold">
+                    Preparation Hint:
+                  </span>
                   {q.tip}
                 </div>
 
@@ -208,20 +270,29 @@ export default function InterviewPracticePage() {
                   <button
                     onClick={() => toggleReveal(q.id)}
                     className={cn(
-                      'flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold shadow-sm transition-colors duration-150',
-                      isRevealed
-                        ? 'bg-primary text-white hover:bg-slate-900'
-                        : 'bg-accent text-white hover:bg-accent/90'
+                      "transition-300 bg-accent hover:bg-accent/90 flex cursor-pointer items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-semibold text-white shadow-sm [&_svg]:size-3.5",
+                      {
+                        "bg-primary text-white hover:bg-slate-900": isRevealed,
+                      },
                     )}
                   >
-                    {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    {isRevealed ? 'Hide answer' : 'Reveal model answer'}
+                    {isRevealed ? (
+                      <>
+                        <EyeOff />
+                        Hide answer
+                      </>
+                    ) : (
+                      <>
+                        <Eye />
+                        Reveal model answer
+                      </>
+                    )}
                   </button>
-                  
+
                   {!isAnswered && (
                     <button
                       onClick={() => handleMarkAnswered(q.id)}
-                      className="px-4 py-2.5 rounded-xl border border-zinc-250 text-xs font-semibold text-zinc-650 hover:bg-zinc-50 hover:text-zinc-700 transition-colors"
+                      className="transition-300 cursor-pointer rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-semibold text-zinc-600 shadow-sm hover:bg-zinc-100 hover:text-zinc-700"
                     >
                       Mark as practiced
                     </button>
@@ -229,54 +300,77 @@ export default function InterviewPracticePage() {
                 </div>
 
                 {/* Hidden STAR Answer Container */}
-                {isRevealed && (
-                  <div className="mt-8 border-t border-zinc-150 pt-8 animate-fade-in flex flex-col gap-6">
-                    <p className="text-zinc-650 text-sm font-semibold leading-relaxed">
+                <div
+                  className={cn("transition-300 grid grid-rows-[0fr]", {
+                    "grid-rows-[1fr] pt-5": isRevealed,
+                  })}
+                >
+                  <div
+                    className={cn(
+                      "transition-300 flex flex-col gap-6 overflow-hidden border-zinc-200",
+                      { "border-t pt-5": isRevealed },
+                    )}
+                  >
+                    <p className="text-sm leading-relaxed font-semibold text-zinc-600">
                       {q.modelAnswer.overview}
                     </p>
 
                     {q.modelAnswer.generalAnswer ? (
                       // General prompt answers
-                      <div className="p-5 rounded-xl bg-zinc-50 border border-zinc-150 text-sm text-zinc-550 leading-relaxed italic font-body">
+                      <div className="font-body rounded-xl border border-zinc-200 bg-zinc-50 p-5 text-sm leading-relaxed text-zinc-600 italic">
                         {q.modelAnswer.generalAnswer}
                       </div>
                     ) : (
                       // Behavioral prompt answers
-                      <div className="grid grid-cols-1 gap-4 font-body">
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 rounded-xl bg-zinc-50 border border-zinc-150 text-xs leading-relaxed text-zinc-500">
-                          <span className="sm:col-span-2 font-bold text-primary uppercase text-[10px] tracking-wider bg-zinc-200 border border-zinc-300 rounded px-2.5 py-1 w-fit h-fit">
-                            S - Situation
-                          </span>
-                          <span className="sm:col-span-10 italic">{q.modelAnswer.situation}</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 rounded-xl bg-zinc-50 border border-zinc-150 text-xs leading-relaxed text-zinc-500">
-                          <span className="sm:col-span-2 font-bold text-primary uppercase text-[10px] tracking-wider bg-zinc-200 border border-zinc-300 rounded px-2.5 py-1 w-fit h-fit">
-                            T - Task
-                          </span>
-                          <span className="sm:col-span-10 italic">{q.modelAnswer.task}</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 rounded-xl bg-zinc-50 border border-zinc-150 text-xs leading-relaxed text-zinc-500">
-                          <span className="sm:col-span-2 font-bold text-primary uppercase text-[10px] tracking-wider bg-zinc-200 border border-zinc-300 rounded px-2.5 py-1 w-fit h-fit">
-                            A - Action
-                          </span>
-                          <span className="sm:col-span-10 italic">{q.modelAnswer.action}</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 rounded-xl bg-zinc-50 border border-zinc-150 text-xs leading-relaxed text-zinc-500">
-                          <span className="sm:col-span-2 font-bold text-primary uppercase text-[10px] tracking-wider bg-zinc-200 border border-zinc-300 rounded px-2.5 py-1 w-fit h-fit">
-                            R - Result
-                          </span>
-                          <span className="sm:col-span-10 italic font-semibold text-primary">{q.modelAnswer.result}</span>
-                        </div>
-                      </div>
+                      <ul className="font-body space-y-4">
+                        <BehavioralAnswer
+                          title="S - Situation"
+                          answer={q.modelAnswer.situation || ""}
+                        />
+                        <BehavioralAnswer
+                          title="T - Task"
+                          answer={q.modelAnswer.task || ""}
+                        />
+                        <BehavioralAnswer
+                          title="A - Action"
+                          answer={q.modelAnswer.action || ""}
+                        />
+                        <BehavioralAnswer
+                          title="R - Result"
+                          answer={q.modelAnswer.result || ""}
+                        />
+                      </ul>
                     )}
                   </div>
-                )}
-              </div>
+                </div>
+              </article>
             );
           })}
-        </div>
+        </section>
       )}
-
-    </div>
+    </section>
   );
 }
+
+const BehavioralAnswer = ({
+  title,
+  answer,
+}: {
+  title: string;
+  answer: string;
+}) => {
+  return (
+    <li className="grid grid-cols-1 gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-xs leading-relaxed text-zinc-500 sm:grid-cols-12">
+      <span className="text-primary size-fit rounded border border-zinc-300 bg-zinc-200 px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase sm:col-span-2">
+        {title}
+      </span>
+      <span
+        className={cn("italic sm:col-span-10", {
+          "text-primary font-semibold": title.toLowerCase().includes("result"),
+        })}
+      >
+        {answer}
+      </span>
+    </li>
+  );
+};

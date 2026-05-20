@@ -35,7 +35,7 @@ export default function Navbar() {
   return (
     <nav
       className={cn(
-        "transition-300 fixed inset-x-0 top-0 z-50 bg-white/80 py-5 backdrop-blur-md",
+        "transition-300 text-primary fixed inset-x-0 top-0 z-50 bg-white py-5 backdrop-blur-md",
         {
           "py-3 shadow-lg": scrolled,
         },
