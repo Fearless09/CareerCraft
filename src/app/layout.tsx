@@ -40,7 +40,7 @@ export default function RootLayout({
         <AppProvider>
           <Navbar />
           {/* Main content pushed down to avoid navbar overlap */}
-          <main className="flex min-h-[calc(100vh-250px)] flex-1 flex-col pt-[60px] md:pt-[76px]">
+          <main className="flex min-h-[calc(100vh-250px)] flex-1 flex-col pt-15 md:pt-19">
             {children}
           </main>
           <Footer />

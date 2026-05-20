@@ -32,82 +32,63 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navItems = [
-    { name: "Resume Builder", href: "/generator", icon: FileText },
-    { name: "Tips Hub", href: "/tips", icon: Sparkles },
-    { name: "Resume Guide", href: "/resume-guide", icon: BookOpen },
-    { name: "Interview Guide", href: "/interview-guide", icon: HelpCircle },
-    { name: "Q&A Practice", href: "/interview-practice", icon: CheckSquare },
-    { name: "Blog", href: "/blog", icon: MessageSquare },
-  ];
-
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 top-0 z-50 bg-transparent py-5 transition-all duration-300",
+        "transition-300 fixed inset-x-0 top-0 z-50 bg-white/80 py-5 backdrop-blur-md",
         {
-          "bg-white/80 py-3 shadow-lg backdrop-blur-md": scrolled,
+          "py-3 shadow-lg": scrolled,
         },
       )}
     >
-      <div className="mx-auto max-w-7xl px-6 md:px-8">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="group flex items-center gap-2">
-            <span className="bg-primary group-hover:bg-accent rounded-lg p-2 text-white transition-colors duration-250">
-              <Sparkles className="h-5 w-5" />
-            </span>
-            <span className="font-display text-primary text-xl font-bold tracking-tight">
-              Career<span className="text-accent font-sans">Craft</span>
-            </span>
-          </Link>
+      <section className="wrapper flex items-center justify-between gap-2 px-5">
+        {/* Logo */}
+        <Link href="/" className="group flex items-center gap-2">
+          <span className="bg-primary group-hover:bg-accent transition-300 rounded-lg p-2 text-white">
+            <Sparkles className="size-5" />
+          </span>
+          <span className="text-primary font-display text-xl font-bold tracking-tight">
+            Career<span className="text-accent font-sans">Craft</span>
+          </span>
+        </Link>
 
-          {/* Desktop Nav Items */}
-          <div className="hidden items-center gap-1 lg:flex">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/" && pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200",
-                    isActive
-                      ? "bg-primary text-white shadow-sm"
-                      : "text-zinc-650 hover:text-primary hover:bg-zinc-100",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="lg:hidden">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-primary hover:text-accent p-1 focus:outline-none"
-              aria-label="Toggle navigation menu"
-            >
-              {isOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
+        {/* Desktop Nav Items */}
+        <div className="hidden items-center gap-1 lg:flex">
+          {navItems.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "transition-300 text-zinc-650 flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium hover:bg-zinc-200",
+                {
+                  "bg-primary hover:bg-primary/90 text-white shadow-md":
+                    pathname === item.href ||
+                    (item.href !== "/" && pathname.startsWith(item.href)),
+                },
               )}
-            </button>
-          </div>
+            >
+              <item.icon className="size-4" />
+              {item.name}
+            </Link>
+          ))}
         </div>
-      </div>
+
+        {/* Mobile Menu Button */}
+        <div className="lg:hidden">
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="text-primary hover:text-accent p-1 focus:outline-none [&_svg]:size-6"
+            aria-label="Toggle navigation menu"
+          >
+            {isOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+      </section>
 
       {/* Mobile Nav Drawer */}
       <div
         className={cn(
-          "border-zinc-150 fixed inset-x-0 top-[60px] z-40 origin-top border-b bg-white px-6 py-6 shadow-lg transition-all duration-300 lg:hidden",
+          "border-zinc-150 fixed inset-x-0 top-15 z-40 origin-top border-b bg-white px-6 py-6 shadow-lg transition-all duration-300 lg:hidden",
           isOpen
             ? "scale-y-100 opacity-100"
             : "pointer-events-none scale-y-0 opacity-0",
@@ -141,3 +122,12 @@ export default function Navbar() {
     </nav>
   );
 }
+
+const navItems = [
+  { name: "Resume Builder", href: "/generator", icon: FileText },
+  { name: "Tips Hub", href: "/tips", icon: Sparkles },
+  { name: "Resume Guide", href: "/resume-guide", icon: BookOpen },
+  { name: "Interview Guide", href: "/interview-guide", icon: HelpCircle },
+  { name: "Q&A Practice", href: "/interview-practice", icon: CheckSquare },
+  { name: "Blog", href: "/blog", icon: MessageSquare },
+];

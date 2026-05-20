@@ -8,7 +8,7 @@
 
   --font-display: var(--font-display), "Playfair Display", serif;
   --font-body: var(--font-body), "DM Sans", sans-serif;
-  
+
   --radius-card: 16px;
   --radius-base: 8px;
 }
@@ -75,15 +75,15 @@ body {
   }
 }
 
-.animate-fade-in-up {
+@utility animate-fade-in-up {
   animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-fade-in {
+@utility animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
 }
 
-.animate-slide-in-right {
+@utility animate-slide-in-right {
   animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -122,4 +122,12 @@ body {
     width: 100% !important;
     min-height: 100% !important;
   }
+}
+
+@utility wrapper {
+  @apply mx-auto w-full max-w-7xl px-5;
+}
+
+@utility transition-300 {
+  @apply transition-all duration-300 ease-in-out;
 }
