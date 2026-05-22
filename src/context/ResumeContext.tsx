@@ -336,7 +336,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
 
   // tag-based skills handler
   const updateSkills = useCallback(
-    (category: "technical" | "soft" | "languages", tags: string[]) => {
+    (category: keyof ResumeData["skills"], tags: string[]) => {
       setResumeData((prev) => ({
         ...prev,
         skills: {

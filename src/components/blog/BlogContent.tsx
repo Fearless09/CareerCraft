@@ -109,7 +109,7 @@ const parseMarkdown = ({ post }: Props) => {
       return (
         <h2
           key={idx}
-          className="font-display text-primary mt-8 mb-4 border-b border-zinc-100 pb-2 text-2xl font-bold"
+          className="font-display text-primary mt-8 mb-4 border-b border-zinc-100 pb-2 text-2xl font-semibold"
         >
           {trimmed.replace("# ", "")}
         </h2>
@@ -119,7 +119,7 @@ const parseMarkdown = ({ post }: Props) => {
       return (
         <h3
           key={idx}
-          className="font-display text-primary mt-6 mb-3 text-xl font-bold"
+          className="font-body text-primary mt-6 mb-3 text-xl font-semibold"
         >
           {trimmed.replace("## ", "")}
         </h3>
@@ -129,7 +129,7 @@ const parseMarkdown = ({ post }: Props) => {
       return (
         <blockquote
           key={idx}
-          className="border-accent text-zinc-650 font-body my-4 rounded-r-xl border-l-4 bg-zinc-50 p-4 leading-relaxed italic"
+          className="border-accent font-body my-4 rounded-r-xl border-l-4 bg-zinc-100 p-4 leading-relaxed text-zinc-600 italic"
         >
           {trimmed.replace("> ", "")}
         </blockquote>
@@ -145,10 +145,7 @@ const parseMarkdown = ({ post }: Props) => {
           className="my-4 flex list-disc flex-col gap-2 pl-6 text-zinc-500"
         >
           {items.map((item, i) => (
-            <li
-              key={i}
-              className="font-body text-sm leading-relaxed text-zinc-500"
-            >
+            <li key={i} className="font-body text-base leading-relaxed">
               {item}
             </li>
           ))}
@@ -165,10 +162,7 @@ const parseMarkdown = ({ post }: Props) => {
           className="my-4 flex list-decimal flex-col gap-2 pl-6 text-zinc-500"
         >
           {items.map((item, i) => (
-            <li
-              key={i}
-              className="font-body text-sm leading-relaxed text-zinc-500"
-            >
+            <li key={i} className="font-body text-base leading-relaxed">
               {item}
             </li>
           ))}
@@ -178,7 +172,7 @@ const parseMarkdown = ({ post }: Props) => {
     return (
       <p
         key={idx}
-        className="font-body my-4 text-sm leading-relaxed text-zinc-500"
+        className="font-body my-4 text-base leading-relaxed text-zinc-500"
       >
         {trimmed}
       </p>

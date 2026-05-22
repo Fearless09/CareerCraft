@@ -1,25 +1,18 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useResume } from '@/context/ResumeContext';
-import { Briefcase, Plus, Trash2, ArrowUp, ArrowDown, ChevronDown, ChevronUp, PlusCircle, MinusCircle } from 'lucide-react';
+import { useResume } from "@/context/ResumeContext";
+import { cn } from "@/lib/utils";
+import { Briefcase, Plus, Trash2, PlusCircle, MinusCircle } from "lucide-react";
+import { ComponentProps, FC } from "react";
 
 export default function ExperienceSection() {
-  const { 
-    resumeData, 
-    addExperience, 
-    updateExperience, 
-    removeExperience 
-  } = useResume();
+  const { resumeData, addExperience, updateExperience, removeExperience } =
+    useResume();
 
   const { experience } = resumeData;
 
-  const handleFieldChange = (id: string, field: string, value: any) => {
-    updateExperience(id, { [field]: value });
-  };
-
   const handleBulletChange = (id: string, index: number, value: string) => {
-    const expItem = experience.find(e => e.id === id);
+    const expItem = experience.find((e) => e.id === id);
     if (!expItem) return;
     const newBullets = [...expItem.bullets];
     newBullets[index] = value;
@@ -27,13 +20,13 @@ export default function ExperienceSection() {
   };
 
   const addBullet = (id: string) => {
-    const expItem = experience.find(e => e.id === id);
+    const expItem = experience.find((e) => e.id === id);
     if (!expItem) return;
-    updateExperience(id, { bullets: [...expItem.bullets, ''] });
+    updateExperience(id, { bullets: [...expItem.bullets, ""] });
   };
 
   const removeBullet = (id: string, index: number) => {
-    const expItem = experience.find(e => e.id === id);
+    const expItem = experience.find((e) => e.id === id);
     if (!expItem) return;
     if (expItem.bullets.length <= 1) return; // Keep at least one bullet
     const newBullets = expItem.bullets.filter((_, idx) => idx !== index);
@@ -41,153 +34,204 @@ export default function ExperienceSection() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center">
+    <section className="space-y-6">
+      <header className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-zinc-100 mb-1">Work History</h2>
-          <p className="text-xs text-zinc-400">Add details about your professional career, key achievements, and duties.</p>
+          <h2 className="mb-1 text-lg font-bold text-zinc-100">Work History</h2>
+          <p className="text-sm text-balance text-zinc-400">
+            Add details about your professional career, key achievements, and
+            duties.
+          </p>
         </div>
+
         <button
           onClick={addExperience}
-          className="flex items-center gap-1.5 bg-accent hover:bg-rose-600 text-white font-medium text-xs px-3 py-2 rounded-lg shadow transition active:scale-95 cursor-pointer"
+          className="bg-accent transition-300 flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-white hover:bg-rose-600 active:scale-95"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="size-4" />
           <span>Add Job</span>
         </button>
-      </div>
+      </header>
 
       {experience.length === 0 ? (
-        <div className="border border-dashed border-zinc-800 rounded-xl p-8 text-center text-zinc-500">
-          <Briefcase className="w-10 h-10 mx-auto mb-2 text-zinc-600" />
+        <main className="rounded-xl border border-dashed border-zinc-800 p-8 text-center text-zinc-500">
+          <Briefcase className="mx-auto mb-2 size-10 text-zinc-600" />
           <p className="text-sm font-semibold">No work experience added yet.</p>
-          <p className="text-xs text-zinc-500 mt-1">Click the "Add Job" button above to populate your career history.</p>
-        </div>
+          <p className="mt-1 text-xs">
+            Click the "Add Job" button above to populate your career history.
+          </p>
+        </main>
       ) : (
-        <div className="space-y-6">
+        <section className="space-y-6">
           {experience.map((exp, index) => (
-            <div 
-              key={exp.id} 
-              className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 relative space-y-4 group animate-fade-in-up"
+            <main
+              key={exp.id}
+              id={"experience_#" + (index + 1)}
+              className="group relative space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-5"
             >
               {/* Header Bar with quick actions */}
               <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <span className="text-xs font-bold text-zinc-400 bg-zinc-850 px-2 py-1 rounded">
+                <span className="rounded bg-zinc-800 px-2.25 py-1 text-xs font-bold text-zinc-400">
                   Job Entry #{index + 1}
                 </span>
-                
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => removeExperience(exp.id)}
-                    title="Remove Job"
-                    className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-850 rounded-lg transition duration-150 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+
+                <button
+                  onClick={() => removeExperience(exp.id)}
+                  title="Remove Job"
+                  className="transition-300 shrink-0 cursor-pointer rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-red-400"
+                >
+                  <Trash2 className="size-4" />
+                </button>
               </div>
 
               {/* Form Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <main
+                id={"experience_form_#" + (index + 1)}
+                className="grid grid-cols-1 gap-4 md:grid-cols-2"
+              >
                 {/* Job Title */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300">Job Title / Position</label>
-                  <input
-                    type="text"
-                    value={exp.jobTitle}
-                    onChange={(e) => handleFieldChange(exp.id, 'jobTitle', e.target.value)}
-                    placeholder="e.g. Senior Frontend Engineer"
-                    className="w-full bg-zinc-855 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent transition"
-                  />
-                </div>
+                <GroupInput
+                  label="Job Title / Position"
+                  id={"job_title_#" + (index + 1)}
+                  value={exp.jobTitle}
+                  onChange={(e) =>
+                    updateExperience(exp.id, { jobTitle: e.target.value })
+                  }
+                  placeholder="e.g. Senior Frontend Engineer"
+                />
 
                 {/* Company Name */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300">Company Name</label>
-                  <input
-                    type="text"
-                    value={exp.company}
-                    onChange={(e) => handleFieldChange(exp.id, 'company', e.target.value)}
-                    placeholder="e.g. TechCraft Solutions"
-                    className="w-full bg-zinc-855 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent transition"
-                  />
-                </div>
+                <GroupInput
+                  label="Company Name"
+                  id={"company_name_#" + (index + 1)}
+                  value={exp.company}
+                  onChange={(e) =>
+                    updateExperience(exp.id, { company: e.target.value })
+                  }
+                  placeholder="e.g. TechCraft Solutions"
+                />
 
                 {/* Start Date */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300">Start Date</label>
-                  <input
-                    type="text"
-                    value={exp.startDate}
-                    onChange={(e) => handleFieldChange(exp.id, 'startDate', e.target.value)}
-                    placeholder="e.g. Jan 2023"
-                    className="w-full bg-zinc-855 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent transition"
-                  />
-                </div>
+                <GroupInput
+                  label="Start Date"
+                  id={"start_date_#" + (index + 1)}
+                  value={exp.startDate}
+                  onChange={(e) =>
+                    updateExperience(exp.id, { startDate: e.target.value })
+                  }
+                  placeholder="e.g. Jan 2023"
+                />
 
                 {/* End Date */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300">End Date</label>
-                  <input
-                    type="text"
-                    value={exp.endDate}
-                    onChange={(e) => handleFieldChange(exp.id, 'endDate', e.target.value)}
-                    placeholder="e.g. Present or Dec 2024"
-                    className="w-full bg-zinc-855 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent transition"
-                  />
-                </div>
+                <GroupInput
+                  label="End Date"
+                  id={"end_date_#" + (index + 1)}
+                  value={exp.endDate}
+                  onChange={(e) =>
+                    updateExperience(exp.id, { endDate: e.target.value })
+                  }
+                  placeholder="e.g. Present or Dec 2024"
+                />
 
                 {/* Location */}
-                <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-xs font-semibold text-zinc-300">Location (City, State / Remote)</label>
-                  <input
-                    type="text"
-                    value={exp.location || ''}
-                    onChange={(e) => handleFieldChange(exp.id, 'location', e.target.value)}
-                    placeholder="e.g. San Francisco, CA or Remote"
-                    className="w-full bg-zinc-855 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent transition"
-                  />
-                </div>
-              </div>
+                <GroupInput
+                  wrapperClassName="md:col-span-2"
+                  label="Location (City, State / Remote)"
+                  id={"company_location_#" + (index + 1)}
+                  value={exp.location || ""}
+                  onChange={(e) =>
+                    updateExperience(exp.id, { location: e.target.value })
+                  }
+                  placeholder="e.g. San Francisco, CA or Remote"
+                />
+              </main>
 
               {/* Bullet Points Description */}
-              <div className="space-y-2.5">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-semibold text-zinc-300">Key Roles & Metrics Achievements</label>
+              <section
+                id={"experience_achievements_#" + (index + 1)}
+                className="space-y-2.5 pt-2"
+              >
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-zinc-300">
+                    Key Roles & Metrics Achievements
+                  </label>
                   <button
                     onClick={() => addBullet(exp.id)}
-                    className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-accent font-semibold transition cursor-pointer"
+                    className="hover:text-accent transition-300 flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-zinc-400"
                   >
-                    <PlusCircle className="w-3.5 h-3.5" />
+                    <PlusCircle className="size-3.5" />
                     <span>Add Bullet Point</span>
                   </button>
                 </div>
 
-                <div className="space-y-2">
+                <div
+                  className="space-y-2"
+                  id={"experience_achievements_forms_#" + (index + 1)}
+                >
                   {exp.bullets.map((bullet, bulletIdx) => (
                     <div key={bulletIdx} className="flex gap-2">
                       <textarea
+                        id={
+                          "experience_achievement_#" +
+                          (index + 1) +
+                          "_" +
+                          (bulletIdx + 1)
+                        }
                         value={bullet}
-                        onChange={(e) => handleBulletChange(exp.id, bulletIdx, e.target.value)}
+                        onChange={(e) =>
+                          handleBulletChange(exp.id, bulletIdx, e.target.value)
+                        }
                         placeholder={`Bullet point description detailing quantitative outcomes (e.g. Led redesign boosting active registrations by 20%).`}
-                        rows={2}
-                        className="w-full bg-zinc-855 border border-zinc-800 text-zinc-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-accent transition"
+                        rows={2.5}
+                        className="focus:border-accent transition-300 w-full rounded-lg border border-zinc-800 bg-zinc-800/40 p-2.5 text-xs text-zinc-200 focus:outline-none"
                       />
                       <button
                         onClick={() => removeBullet(exp.id, bulletIdx)}
                         disabled={exp.bullets.length <= 1}
                         title="Delete Bullet"
-                        className="p-2 text-zinc-600 hover:text-red-400 hover:bg-zinc-850 rounded-lg transition disabled:opacity-40 shrink-0 self-start cursor-pointer"
+                        className="transition-300 shrink-0 cursor-pointer self-start rounded-lg p-2 text-zinc-600 hover:bg-zinc-800 hover:text-red-400 disabled:opacity-40"
                       >
-                        <MinusCircle className="w-4 h-4" />
+                        <MinusCircle className="size-4" />
                       </button>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
+              </section>
+            </main>
           ))}
-        </div>
+        </section>
       )}
-    </div>
+    </section>
   );
 }
+
+type GroupInput = FC<
+  ComponentProps<"input"> & {
+    label: string;
+    wrapperClassName?: string;
+  }
+>;
+
+const GroupInput: GroupInput = ({
+  label,
+  wrapperClassName,
+  className,
+  type = "text",
+  ...props
+}) => {
+  return (
+    <div className={cn("space-y-1.5", wrapperClassName)}>
+      <label htmlFor={props.id} className="text-xs font-semibold text-zinc-300">
+        {label}
+      </label>
+      <input
+        type={type}
+        className={cn(
+          "focus:border-accent transition-300 w-full rounded-lg border border-zinc-800 bg-zinc-800/40 px-3 py-2 text-sm text-zinc-200 focus:outline-none",
+          className,
+        )}
+        {...props}
+      />
+    </div>
+  );
+};

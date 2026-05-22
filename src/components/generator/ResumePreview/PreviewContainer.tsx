@@ -16,6 +16,25 @@ import {
   Palette,
   Check,
 } from "lucide-react";
+import { ResumeData } from "@/types/resume";
+import { cn } from "@/lib/utils";
+
+const COLORS = [
+  { name: "Deep Navy", hex: "#1e3a8a" },
+  { name: "Indigo Blue", hex: "#4f46e5" },
+  { name: "Sleek Teal", hex: "#0d9488" },
+  { name: "Vibrant Coral", hex: "#e94560" },
+  { name: "Luxury Emerald", hex: "#059669" },
+  { name: "Premium Slate", hex: "#3f3f46" },
+];
+
+const TEMPLATES: { id: ResumeData["meta"]["templateId"]; label: string }[] = [
+  { id: "classic", label: "Classic Chrono" },
+  { id: "modern", label: "Modern Executive" },
+  { id: "minimal", label: "Minimalist Sleek" },
+];
+const ZOOM_MAX = 1.2;
+const ZOOM_MIN = 0.5;
 
 export default function PreviewContainer() {
   const { resumeData, setTemplate, setAccentColor } = useResume();
@@ -23,23 +42,9 @@ export default function PreviewContainer() {
   const [zoom, setZoom] = useState<number>(0.85); // Default scaled down slightly to fit on screen
   const [isExporting, setIsExporting] = useState<boolean>(false);
 
-  const colors = [
-    { name: "Deep Navy", hex: "#1e3a8a" },
-    { name: "Indigo Blue", hex: "#4f46e5" },
-    { name: "Sleek Teal", hex: "#0d9488" },
-    { name: "Vibrant Coral", hex: "#e94560" },
-    { name: "Luxury Emerald", hex: "#059669" },
-    { name: "Premium Slate", hex: "#3f3f46" },
-  ];
-
-  const templates: { id: "classic" | "modern" | "minimal"; label: string }[] = [
-    { id: "classic", label: "Classic Chrono" },
-    { id: "modern", label: "Modern Executive" },
-    { id: "minimal", label: "Minimalist Sleek" },
-  ];
-
-  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.05, 1.2));
-  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.05, 0.5));
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.05, ZOOM_MAX));
+  const handleZoomOut = () =>
+    setZoom((prev) => Math.max(prev - 0.05, ZOOM_MIN));
 
   const handleDownload = async () => {
     setIsExporting(true);
@@ -103,99 +108,117 @@ export default function PreviewContainer() {
   };
 
   return (
-    <div className="flex h-full flex-col border-l border-zinc-800 bg-zinc-900 text-zinc-100 select-none">
+    <section className="flex h-full flex-col border-l border-zinc-800 bg-zinc-900 text-zinc-100 select-none">
       {/* Top Options Bar */}
-      <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 bg-zinc-950/80 p-4 backdrop-blur-md">
+      <section className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 bg-zinc-950/80 p-4 backdrop-blur-md">
         {/* Template Selector */}
-        <div className="flex items-center gap-2">
-          <LayoutTemplate className="h-4 w-4 text-zinc-400" />
+        <main id="template-selector" className="flex items-center gap-2">
+          <LayoutTemplate className="size-4 text-zinc-400" />
           <span className="mr-1 hidden text-xs font-medium text-zinc-400 sm:inline">
             Design:
           </span>
+
           <div className="flex rounded-lg border border-zinc-800 bg-zinc-900 p-0.5">
-            {templates.map((t) => (
+            {TEMPLATES.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setTemplate(t.id)}
-                className={`cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-all duration-200 ${
-                  resumeData.meta.templateId === t.id
-                    ? "bg-accent text-white shadow"
-                    : "text-zinc-400 hover:text-zinc-200"
-                }`}
+                onClick={() => {
+                  if (t.id === resumeData.meta.templateId) return;
+                  setTemplate(t.id);
+                }}
+                className={cn(
+                  "transition-300 shrink-0 cursor-pointer rounded-md px-3 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-200",
+                  {
+                    "bg-accent text-white": resumeData.meta.templateId === t.id,
+                  },
+                )}
               >
                 {t.label}
               </button>
             ))}
           </div>
-        </div>
+        </main>
 
         {/* Accent Color Palette */}
-        <div className="flex items-center gap-2">
-          <Palette className="h-4 w-4 text-zinc-400" />
+        <main id="color-palette" className="flex items-center gap-2">
+          <Palette className="size-4 text-zinc-400" />
           <span className="mr-1 hidden text-xs font-medium text-zinc-400 sm:inline">
             Theme:
           </span>
+
           <div className="flex items-center gap-1.5">
-            {colors.map((color) => (
+            {COLORS.map((color) => (
               <button
                 key={color.hex}
-                onClick={() => setAccentColor(color.hex)}
+                onClick={() => {
+                  if (color.hex === resumeData.meta.accentColor) return;
+                  setAccentColor(color.hex);
+                }}
                 title={color.name}
-                className="relative flex h-5 w-5 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
+                className="transition-300 relative flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full hover:scale-110 active:scale-95"
                 style={{ backgroundColor: color.hex }}
               >
                 {resumeData.meta.accentColor === color.hex && (
-                  <Check className="h-3.5 w-3.5 font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" />
+                  <Check className="size-3.5 stroke-3 text-white drop-shadow-[0_1px_2px_rgba(255,255,255,0.5)]" />
                 )}
               </button>
             ))}
           </div>
-        </div>
+        </main>
 
         {/* Zoom & Export Actions */}
-        <div className="flex items-center gap-2">
+        <main id="zoom_export" className="flex items-center gap-2">
           {/* Zoom Buttons */}
-          <div className="flex items-center overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+          <div
+            id="zoom"
+            className="flex items-center overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900"
+          >
             <button
               onClick={handleZoomOut}
-              disabled={zoom <= 0.5}
+              disabled={zoom <= ZOOM_MIN}
               title="Zoom Out"
-              className="active:bg-zinc-850 hover:bg-zinc-850 cursor-pointer p-2 text-zinc-400 hover:text-zinc-200 disabled:opacity-50"
+              className="transition-300 shrink-0 cursor-pointer p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 active:bg-zinc-800 disabled:pointer-events-none disabled:opacity-50"
             >
-              <ZoomOut className="h-4 w-4" />
+              <ZoomOut className="size-4" />
             </button>
-            <span className="min-w-[40px] px-1 text-center font-mono text-xs font-medium text-zinc-400 select-none">
+
+            <span className="min-w-10 shrink-0 px-1 text-center font-mono text-xs font-medium text-zinc-400 select-none">
               {Math.round(zoom * 100)}%
             </span>
+
             <button
               onClick={handleZoomIn}
-              disabled={zoom >= 1.2}
+              disabled={zoom >= ZOOM_MAX}
               title="Zoom In"
-              className="active:bg-zinc-850 hover:bg-zinc-850 cursor-pointer p-2 text-zinc-400 hover:text-zinc-200 disabled:opacity-50"
+              className="transition-300 shrink-0 cursor-pointer p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 active:bg-zinc-800 disabled:pointer-events-auto disabled:opacity-50"
             >
-              <ZoomIn className="h-4 w-4" />
+              <ZoomIn className="size-4" />
             </button>
           </div>
 
           {/* Export Action */}
           <button
+            title="export button"
             onClick={handleDownload}
             disabled={isExporting}
-            className={`from-accent flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r to-rose-600 px-4.5 py-2.5 text-xs font-medium text-white shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50`}
+            className={`from-accent transition-300 flex cursor-pointer items-center gap-2 rounded-lg bg-linear-to-r to-rose-600 px-4.5 py-2.5 text-xs font-medium text-white hover:brightness-115 active:scale-98 disabled:pointer-events-none disabled:opacity-50`}
           >
-            <Download className="h-4 w-4" />
+            <Download className="size-4" />
             <span>{isExporting ? "Exporting..." : "Download PDF"}</span>
           </button>
-        </div>
-      </div>
+        </main>
+      </section>
 
       {/* Main Preview Work Surface */}
-      <div className="relative flex flex-1 items-start justify-center overflow-auto bg-zinc-900 p-8">
+      <section className="relative flex flex-1 items-start justify-center overflow-auto bg-zinc-900 p-8">
         {/* Shadow Overlay while Exporting */}
         {isExporting && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-xs">
-            <div className="flex max-w-[280px] flex-col items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/90 p-6 text-center shadow-2xl">
-              <div className="border-accent h-10 w-10 animate-spin rounded-full border-3 border-t-transparent"></div>
+          <main
+            id="exporting_pdf"
+            className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-xs"
+          >
+            <div className="flex max-w-70 flex-col items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/90 px-6 py-8 text-center backdrop-blur-md">
+              <span className="border-accent size-11 animate-spin rounded-full border-3 border-t-transparent" />
               <div>
                 <p className="text-sm font-semibold">Rendering PDF Engine</p>
                 <p className="mt-1 text-xs text-zinc-500">
@@ -203,7 +226,7 @@ export default function PreviewContainer() {
                 </p>
               </div>
             </div>
-          </div>
+          </main>
         )}
 
         {/* Scaled Preview Canvas Wrapper */}
@@ -212,17 +235,17 @@ export default function PreviewContainer() {
             transform: `scale(${zoom})`,
             transformOrigin: "top center",
           }}
-          className="shrink-0 pb-16 transition-transform duration-100 ease-out"
+          className="transition-300 relative shrink-0 pb-16"
         >
           {/* Exact A4 Boundaries */}
           <div
             id="resume-preview-document"
-            className="text-zinc-850 relative box-border min-h-[297mm] w-[210mm] border border-zinc-700/50 bg-white p-[20mm] text-left shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+            className="relative box-border min-h-[297mm] w-[210mm] border border-zinc-700/50 bg-white p-[20mm] text-left text-zinc-800 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
           >
             {/* Visual Indicator of A4 page fold (Dashed indicator, not exported by canvas) */}
-            <div className="pointer-events-none absolute top-[296.8mm] right-0 left-0 z-10 flex h-0 items-center justify-end border-t border-dashed border-zinc-300 opacity-70 select-none print:hidden">
+            <div className="pointer-events-none absolute inset-x-0 top-[296.8mm] z-10 flex h-0 items-center justify-end border-t border-dashed border-zinc-300 opacity-70 select-none print:hidden">
               <span className="mr-2 flex items-center gap-1 rounded-l-md bg-zinc-200 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase shadow-sm">
-                <FileText className="h-3 w-3" /> Page 1 Fold
+                <FileText className="size-3" /> Page 1 Fold
               </span>
             </div>
 
@@ -236,7 +259,7 @@ export default function PreviewContainer() {
             {activeTemplate()}
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </section>
   );
 }

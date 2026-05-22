@@ -45,7 +45,7 @@ export default function BlogListingPage() {
         <h1 className="font-display text-primary mb-4 text-3xl leading-tight font-extrabold sm:text-4xl">
           The CareerCraft Blog
         </h1>
-        <p className="text-sm leading-relaxed text-zinc-500">
+        <p className="text-base leading-relaxed text-zinc-500">
           Stay ahead of current hiring trends. Read guides, interview tactics,
           resume optimization checks, and salary negotiation formulas written
           for 2026 job seekers.
@@ -156,7 +156,7 @@ export default function BlogListingPage() {
                 </Link>
 
                 {/* Excerpt */}
-                <p className="font-body mb-6 flex-1 text-xs leading-relaxed text-zinc-500">
+                <p className="font-body mb-6 flex-1 text-sm leading-relaxed text-zinc-500">
                   {post.excerpt}
                 </p>
 

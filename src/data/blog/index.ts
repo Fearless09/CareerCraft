@@ -161,6 +161,7 @@ During your first screening call, the recruiter will likely ask: *"What are your
 Giving a hard number immediately anchors you. If your number is too low, you lose leverage. If it is too high, you might get filtered out.
 
 **What to Say instead:**
+
 > *"I am highly open to a competitive package. Could you share the budgeted salary range for this role?"*
 
 ## 2. Anchor on Value, Not Personal Needs
