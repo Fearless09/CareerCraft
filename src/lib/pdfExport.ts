@@ -18,6 +18,11 @@ export async function exportResumeToPDF(
 
   // Create container clone to manipulate DOM for spacing off-screen
   const clone = originalElement.cloneNode(true) as HTMLElement;
+
+  // Remove dynamic page-fold indicators from the export clone so they are not rendered in the PDF
+  const foldIndicators = clone.querySelectorAll(".page-fold-indicator");
+  foldIndicators.forEach((indicator) => indicator.remove());
+
   clone.style.position = "absolute";
   clone.style.left = "-9999px";
   clone.style.top = "0";
@@ -28,10 +33,12 @@ export async function exportResumeToPDF(
   document.body.appendChild(clone);
 
   try {
-    // 1 A4 page at 96 DPI is approximately 1123px high for standard width of 794px.
-    // We base our scaling on the actual width of the element to keep aspect ratio perfect.
     const elementWidth = clone.offsetWidth;
-    const pageHeightPx = (297 / 210) * elementWidth; // A4 aspect ratio (297mm / 210mm)
+    const pxPerMm = elementWidth / 210;
+    const pageHeightPx = 297 * pxPerMm;
+    const paddingTopPx = 20 * pxPerMm;     // 20mm padding top
+    const paddingBottomPx = 20 * pxPerMm;  // 20mm padding bottom
+    const usablePageHeightPx = pageHeightPx - paddingTopPx - paddingBottomPx; // 257mm
 
     // Let's query all blocks that we want to prevent from breaking in the middle (e.g. experience cards, sections, headings)
     const blocks = Array.from(
@@ -46,23 +53,48 @@ export async function exportResumeToPDF(
 
       const topOffset = blockRect.top - containerRect.top;
       const bottomOffset = blockRect.bottom - containerRect.top;
+      const blockHeight = blockRect.height;
 
-      const topPage = Math.floor(topOffset / pageHeightPx);
-      const bottomPage = Math.floor(bottomOffset / pageHeightPx);
+      const page = Math.floor(topOffset / pageHeightPx);
+      const localTop = topOffset - page * pageHeightPx;
+      const localBottom = bottomOffset - page * pageHeightPx;
 
-      // If the block spans across two pages, insert a spacer to push it to the next page
-      if (topPage !== bottomPage && blockRect.height < pageHeightPx) {
-        const nextPageStartOffset = bottomPage * pageHeightPx;
-        const requiredSpacerHeight = nextPageStartOffset - topOffset;
+      // 1. If this is not the first page, and the block starts inside the top padding zone, push it down
+      if (page > 0 && localTop < paddingTopPx) {
+        const targetTop = page * pageHeightPx + paddingTopPx;
+        const requiredSpacerHeight = targetTop - topOffset;
 
-        if (requiredSpacerHeight > 0 && requiredSpacerHeight < pageHeightPx) {
+        if (requiredSpacerHeight > 0) {
           const spacer = document.createElement("div");
           spacer.style.height = `${requiredSpacerHeight}px`;
           spacer.style.width = "100%";
           spacer.style.backgroundColor = "transparent";
-          spacer.className = "pdf-page-spacer"; // Identifier
+          spacer.className = "pdf-page-spacer";
 
           block.parentNode?.insertBefore(spacer, block);
+          // Re-measure this block since it has shifted
+          i--;
+          continue;
+        }
+      }
+
+      // 2. If the block overflows the bottom content limit of the current page
+      const contentEnd = pageHeightPx - paddingBottomPx;
+      if (localBottom > contentEnd && blockHeight < usablePageHeightPx) {
+        const targetTop = (page + 1) * pageHeightPx + paddingTopPx;
+        const requiredSpacerHeight = targetTop - topOffset;
+
+        if (requiredSpacerHeight > 0) {
+          const spacer = document.createElement("div");
+          spacer.style.height = `${requiredSpacerHeight}px`;
+          spacer.style.width = "100%";
+          spacer.style.backgroundColor = "transparent";
+          spacer.className = "pdf-page-spacer";
+
+          block.parentNode?.insertBefore(spacer, block);
+          // Re-measure this block since it has shifted
+          i--;
+          continue;
         }
       }
     }

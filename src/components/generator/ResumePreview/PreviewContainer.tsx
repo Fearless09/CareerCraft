@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useResume } from "@/context/ResumeContext";
 import { useUI } from "@/context/UIContext";
 import { exportResumeToPDF } from "@/lib/pdfExport";
@@ -19,20 +19,6 @@ import {
 import { ResumeData } from "@/types/resume";
 import { cn } from "@/lib/utils";
 
-const COLORS = [
-  { name: "Deep Navy", hex: "#1e3a8a" },
-  { name: "Indigo Blue", hex: "#4f46e5" },
-  { name: "Sleek Teal", hex: "#0d9488" },
-  { name: "Vibrant Coral", hex: "#e94560" },
-  { name: "Luxury Emerald", hex: "#059669" },
-  { name: "Premium Slate", hex: "#3f3f46" },
-];
-
-const TEMPLATES: { id: ResumeData["meta"]["templateId"]; label: string }[] = [
-  { id: "classic", label: "Classic Chrono" },
-  { id: "modern", label: "Modern Executive" },
-  { id: "minimal", label: "Minimalist Sleek" },
-];
 const ZOOM_MAX = 1.2;
 const ZOOM_MIN = 0.5;
 
@@ -41,6 +27,37 @@ export default function PreviewContainer() {
   const { addToast } = useUI();
   const [zoom, setZoom] = useState<number>(0.85); // Default scaled down slightly to fit on screen
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [pageCount, setPageCount] = useState<number>(1);
+  const previewRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const element = previewRef.current;
+    if (!element) return;
+
+    const updatePageCount = () => {
+      const width = element.offsetWidth;
+      const height = element.offsetHeight;
+      if (width > 0) {
+        const pxPerMm = width / 210;
+        const heightMm = height / pxPerMm;
+        // Apply a small tolerance (1mm) to prevent browser subpixel layout rounding
+        // discrepancies from triggering a phantom extra page.
+        const pages = Math.max(1, Math.floor((heightMm - 1) / 297));
+        setPageCount(pages);
+      }
+    };
+
+    const observer = new ResizeObserver(() => {
+      updatePageCount();
+    });
+
+    observer.observe(element);
+    updatePageCount();
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.05, ZOOM_MAX));
   const handleZoomOut = () =>
@@ -55,7 +72,11 @@ export default function PreviewContainer() {
       setTimeout(async () => {
         try {
           const fileName = `${resumeData.personalInfo.fullName.replace(/\s+/g, "_") || "My"}_Resume.pdf`;
-          await exportResumeToPDF("resume-preview-document", fileName);
+          if (!previewRef.current) {
+            console.error("Preview Not found");
+            return;
+          }
+          await exportResumeToPDF(previewRef.current.id, fileName);
           addToast(
             "Your premium resume has downloaded successfully!",
             "success",
@@ -71,39 +92,6 @@ export default function PreviewContainer() {
       console.error(error);
       setIsExporting(false);
       addToast("Error initializing PDF exporter.", "error");
-    }
-  };
-
-  const activeTemplate = () => {
-    switch (resumeData.meta.templateId) {
-      case "classic":
-        return (
-          <ClassicTemplate
-            data={resumeData}
-            accentColor={resumeData.meta.accentColor}
-          />
-        );
-      case "modern":
-        return (
-          <ModernTemplate
-            data={resumeData}
-            accentColor={resumeData.meta.accentColor}
-          />
-        );
-      case "minimal":
-        return (
-          <MinimalTemplate
-            data={resumeData}
-            accentColor={resumeData.meta.accentColor}
-          />
-        );
-      default:
-        return (
-          <ModernTemplate
-            data={resumeData}
-            accentColor={resumeData.meta.accentColor}
-          />
-        );
     }
   };
 
@@ -230,7 +218,7 @@ export default function PreviewContainer() {
         )}
 
         {/* Scaled Preview Canvas Wrapper */}
-        <div
+        <section
           style={{
             transform: `scale(${zoom})`,
             transformOrigin: "top center",
@@ -238,28 +226,61 @@ export default function PreviewContainer() {
           className="transition-300 relative shrink-0 pb-16"
         >
           {/* Exact A4 Boundaries */}
-          <div
+          <section
+            ref={previewRef}
             id="resume-preview-document"
-            className="relative box-border min-h-[297mm] w-[210mm] border border-zinc-700/50 bg-white p-[20mm] text-left text-zinc-800 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+            className="relative box-border min-h-[297mm] w-[210mm] bg-white p-[20mm] text-left text-zinc-800"
           >
             {/* Visual Indicator of A4 page fold (Dashed indicator, not exported by canvas) */}
-            <div className="pointer-events-none absolute inset-x-0 top-[296.8mm] z-10 flex h-0 items-center justify-end border-t border-dashed border-zinc-300 opacity-70 select-none print:hidden">
-              <span className="mr-2 flex items-center gap-1 rounded-l-md bg-zinc-200 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase shadow-sm">
-                <FileText className="size-3" /> Page 1 Fold
-              </span>
-            </div>
-
-            <div className="pointer-events-none absolute top-[593.8mm] right-0 left-0 z-10 flex h-0 items-center justify-end border-t border-dashed border-zinc-300 opacity-70 select-none print:hidden">
-              <span className="mr-2 flex items-center gap-1 rounded-l-md bg-zinc-200 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase shadow-sm">
-                <FileText className="h-3 w-3" /> Page 2 Fold
-              </span>
-            </div>
+            {Array.from({ length: pageCount }).map((_, index) => {
+              const pageNumber = index + 1;
+              const topPositionMm = index * 297 + 288;
+              return (
+                <div
+                  key={pageNumber}
+                  style={{ top: `${topPositionMm}mm` }}
+                  className="page-fold-indicator pointer-events-none absolute right-0 left-0 z-10 flex h-0 items-center justify-end border-t border-dashed border-zinc-300 opacity-70 select-none print:hidden"
+                >
+                  <span className="mr-2 flex items-center gap-1 rounded-l-md bg-zinc-200 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase shadow-sm">
+                    <FileText className="size-3" /> Page {pageNumber} Fold
+                  </span>
+                </div>
+              );
+            })}
 
             {/* Template Render Inside Canvas */}
-            {activeTemplate()}
-          </div>
-        </div>
+            {activeTemplate(resumeData)}
+          </section>
+        </section>
       </section>
     </section>
   );
 }
+
+const COLORS = [
+  { name: "Deep Navy", hex: "#1e3a8a" },
+  { name: "Indigo Blue", hex: "#4f46e5" },
+  { name: "Sleek Teal", hex: "#0d9488" },
+  { name: "Vibrant Coral", hex: "#e94560" },
+  { name: "Luxury Emerald", hex: "#059669" },
+  { name: "Premium Slate", hex: "#3f3f46" },
+];
+
+const TEMPLATES: { id: ResumeData["meta"]["templateId"]; label: string }[] = [
+  { id: "classic", label: "Classic Chrono" },
+  { id: "modern", label: "Modern Executive" },
+  { id: "minimal", label: "Minimalist Sleek" },
+];
+
+const activeTemplate = (resumeData: ResumeData) => {
+  switch (resumeData.meta.templateId) {
+    case "classic":
+      return <ClassicTemplate data={resumeData} />;
+    case "modern":
+      return <ModernTemplate data={resumeData} />;
+    case "minimal":
+      return <MinimalTemplate data={resumeData} />;
+    default:
+      return <ModernTemplate data={resumeData} />;
+  }
+};

@@ -2,10 +2,9 @@ import { ResumeData } from "@/types/resume";
 
 interface TemplateProps {
   data: ResumeData;
-  accentColor: string;
 }
 
-export default function ClassicTemplate({ data, accentColor }: TemplateProps) {
+export default function ClassicTemplate({ data }: TemplateProps) {
   const {
     personalInfo,
     summary,
@@ -15,7 +14,9 @@ export default function ClassicTemplate({ data, accentColor }: TemplateProps) {
     projects,
     certifications,
     additionalSections,
+    meta,
   } = data;
+  const { accentColor } = meta;
 
   return (
     <div
@@ -240,19 +241,21 @@ export default function ClassicTemplate({ data, accentColor }: TemplateProps) {
           >
             Certifications
           </h2>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-zinc-700">
+          <ul className="space-y-3 text-xs text-zinc-700">
             {certifications.map((cert) => (
-              <div
-                key={cert.id}
-                className="pdf-block flex items-center justify-between border-b border-zinc-100 py-0.5 pb-1"
-              >
-                <span className="font-semibold text-zinc-800">{cert.name}</span>
-                <span className="ml-2 whitespace-nowrap text-zinc-500">
-                  {cert.issuer} ({cert.year})
-                </span>
-              </div>
+              <li key={cert.id} className="pdf-block">
+                <p className="flex items-baseline justify-between gap-2">
+                  <span className="font-semibold text-zinc-800">
+                    {cert.name}
+                  </span>
+                  <span className="whitespace-nowrap text-zinc-500">
+                    {cert.year}
+                  </span>
+                </p>
+                <p className="text-zinc-600">{cert.issuer}</p>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 

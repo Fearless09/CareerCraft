@@ -35,6 +35,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${dmSans.variable} ${playfair.variable} h-full scroll-smooth antialiased`}
+      data-scroll-behavior="smooth"
     >
       <body className="font-body text-primary flex min-h-full flex-col bg-zinc-50">
         <AppProvider>

@@ -3,10 +3,9 @@ import Image from "next/image";
 
 interface TemplateProps {
   data: ResumeData;
-  accentColor: string;
 }
 
-export default function ModernTemplate({ data, accentColor }: TemplateProps) {
+export default function ModernTemplate({ data }: TemplateProps) {
   const {
     personalInfo,
     summary,
@@ -16,8 +15,9 @@ export default function ModernTemplate({ data, accentColor }: TemplateProps) {
     projects,
     certifications,
     additionalSections,
+    meta,
   } = data;
-
+  const { accentColor } = meta;
   return (
     <section
       className="font-sans leading-normal text-zinc-800"

@@ -2,10 +2,9 @@ import { ResumeData } from "@/types/resume";
 
 interface TemplateProps {
   data: ResumeData;
-  accentColor: string;
 }
 
-export default function MinimalTemplate({ data, accentColor }: TemplateProps) {
+export default function MinimalTemplate({ data }: TemplateProps) {
   const {
     personalInfo,
     summary,
@@ -15,7 +14,9 @@ export default function MinimalTemplate({ data, accentColor }: TemplateProps) {
     projects,
     certifications,
     additionalSections,
+    meta,
   } = data;
+  const { accentColor } = meta;
 
   return (
     <section
@@ -94,7 +95,7 @@ export default function MinimalTemplate({ data, accentColor }: TemplateProps) {
       {/* Education */}
       {education && education.length > 0 && (
         <div className="mb-6 grid grid-cols-[140px_1fr] gap-4 border-t border-zinc-100 pt-5">
-          <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+          <span className="pdf-block text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             Education
           </span>
           <div className="flex flex-col gap-4.5">
