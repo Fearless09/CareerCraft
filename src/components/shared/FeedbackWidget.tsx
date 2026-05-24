@@ -9,7 +9,7 @@ import { usePathname } from "next/navigation";
 const BLACKLISTED_URL = ["/generator"];
 
 export default function FeedbackWidget() {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
   const openModal = useCallback(() => setIsOpen(true), []);
