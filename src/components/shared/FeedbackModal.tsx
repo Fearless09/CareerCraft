@@ -57,7 +57,9 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => titleInputRef.current?.focus(), 80);
+      document.body.style.overflow = "hidden";
     } else {
+      document.body.style.overflow = "auto";
       // Reset form when modal closes (after animation)
       setTimeout(() => {
         setForm(INITIAL_FORM);

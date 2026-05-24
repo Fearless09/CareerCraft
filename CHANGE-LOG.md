@@ -2,6 +2,37 @@
 
 All notable changes to the CareerCraft project will be documented in this file.
 
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventions, and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [Unreleased]
+
+### Planned
+- Dark mode toggle (Tailwind dark variant + user preference persisted in localStorage)
+- User authentication via email and OAuth (Phase 2)
+- Cloud resume storage with PostgreSQL via Prisma (Phase 2)
+- Admin CMS for blog posts with markdown support (Phase 2)
+- AI-powered professional summary and bullet-point suggestions (Phase 3)
+- Cover letter generator paired with resume data context (Phase 3)
+- ATS score checker with keyword match scoring against job descriptions (Phase 3)
+- Resume public sharing via unique slug (Phase 3)
+- Mobile application (React Native, Phase 4)
+
+---
+
+## [1.1.2] - 2026-05-24
+
+### Added
+
+- **FeedbackModal Component**: Implemented a full-featured `FeedbackModal.tsx` shared component that allows users to submit structured feedback directly from any page. The modal includes category selection, star rating, and a text area for free-form comments.
+- **FeedbackWidget Component**: Added a lightweight `FeedbackWidget.tsx` trigger button that floats persistently on the UI, giving users a consistent entry point to submit feedback without disrupting their workflow.
+- **Svgs Shared Utility**: Created `Svgs.tsx` in `components/shared/` to centralise reusable SVG icon definitions and keep inline SVG usage consistent across the application.
+
+### Improved
+
+- **Navbar Enhancements**: Continued iterative refinements to `Navbar.tsx`, including active state styling, improved accessibility attributes, and sticky positioning across all viewport sizes.
+
 ---
 
 ## [1.1.1] - 2026-05-23 15:32:00

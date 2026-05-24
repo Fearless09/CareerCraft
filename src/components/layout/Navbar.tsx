@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,6 +18,7 @@ import { cn } from "../../lib/utils";
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const mobileRef = useRef<HTMLElement>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -31,6 +32,31 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      document.body.style.overflow = "auto";
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+    const handleClick = (e: MouseEvent) => {
+      if (mobileRef.current && !mobileRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+
+    window.addEventListener("keydown", handleKey);
+    document.addEventListener("mousedown", handleClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [isOpen]);
 
   return (
     <nav
@@ -77,7 +103,7 @@ export default function Navbar() {
         <div className="lg:hidden">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="text-primary hover:text-accent p-1 focus:outline-none [&_svg]:size-6"
+            className="text-primary hover:text-accent transition-300 cursor-pointer p-1 focus:outline-none [&_svg]:size-6"
             aria-label="Toggle navigation menu"
           >
             {isOpen ? <X /> : <Menu />}
@@ -86,39 +112,37 @@ export default function Navbar() {
       </section>
 
       {/* Mobile Nav Drawer */}
-      <div
+      <section
+        ref={mobileRef}
         className={cn(
-          "border-zinc-150 fixed inset-x-0 top-15 z-40 origin-top border-b bg-white px-6 py-6 shadow-lg transition-all duration-300 lg:hidden",
-          isOpen
-            ? "scale-y-100 opacity-100"
-            : "pointer-events-none scale-y-0 opacity-0",
+          "transition-300 fixed inset-x-0 top-15 z-40 flex origin-top flex-col gap-3 border-b border-zinc-200 bg-white px-6 py-6 shadow-lg lg:hidden",
+          { "pointer-events-none scale-y-0": !isOpen },
         )}
       >
-        <div className="flex flex-col gap-3">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/" && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setIsOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all duration-200",
-                  isActive
-                    ? "bg-primary text-white"
-                    : "text-zinc-650 hover:text-primary hover:bg-zinc-55 bg-zinc-50",
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                {item.name}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/" && pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={() => setIsOpen(false)}
+              className={cn(
+                "transition-300 hover:text-primary flex items-center gap-3 rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 text-base font-medium text-zinc-600 hover:bg-zinc-100",
+                {
+                  "bg-primary hover:bg-primary text-white hover:text-white":
+                    isActive,
+                },
+              )}
+            >
+              <Icon className="h-5 w-5" />
+              {item.name}
+            </Link>
+          );
+        })}
+      </section>
     </nav>
   );
 }
