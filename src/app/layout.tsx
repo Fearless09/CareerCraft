@@ -5,6 +5,7 @@ import { AppProvider } from "../context";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import ToastNotification from "../components/shared/ToastNotification";
+import FeedbackWidget from "../components/shared/FeedbackWidget";
 
 const dmSans = DM_Sans({
   variable: "--font-body",
@@ -46,6 +47,7 @@ export default function RootLayout({
           </main>
           <Footer />
           <ToastNotification />
+          <FeedbackWidget />
         </AppProvider>
       </body>
     </html>
