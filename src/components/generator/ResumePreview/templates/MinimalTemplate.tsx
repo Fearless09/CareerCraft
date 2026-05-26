@@ -24,7 +24,7 @@ export default function MinimalTemplate({ data }: TemplateProps) {
       style={{ wordBreak: "break-word" }}
     >
       {/* Header Panel */}
-      <div className="pdf-block mb-6">
+      <div className="pdf-block mb-5">
         <h1 className="font-display mb-1 text-3xl font-light tracking-wide text-zinc-950">
           {personalInfo.fullName || "Your Name"}
         </h1>
@@ -35,7 +35,7 @@ export default function MinimalTemplate({ data }: TemplateProps) {
           {personalInfo.jobTitle || "Professional Title"}
         </p>
 
-        <div className="flex flex-wrap gap-x-5 gap-y-1.5 border-b border-zinc-200 pb-4 text-xs font-light text-zinc-500">
+        <div className="flex flex-wrap gap-x-5 gap-y-1.5 border-b border-zinc-200 pb-2.5 text-xs font-light text-zinc-500">
           {personalInfo.email && <span>{personalInfo.email}</span>}
           {personalInfo.phone && <span>{personalInfo.phone}</span>}
           {personalInfo.location && <span>{personalInfo.location}</span>}
@@ -46,7 +46,7 @@ export default function MinimalTemplate({ data }: TemplateProps) {
 
       {/* Summary Section */}
       {summary && (
-        <div className="pdf-block mb-6 grid grid-cols-[140px_1fr] gap-4">
+        <div className="pdf-block mb-5 grid grid-cols-[120px_1fr] gap-4">
           <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             About Me
           </span>
@@ -58,11 +58,11 @@ export default function MinimalTemplate({ data }: TemplateProps) {
 
       {/* Work History */}
       {experience && experience.length > 0 && (
-        <div className="mb-6 grid grid-cols-[140px_1fr] gap-4 border-t border-zinc-100 pt-5">
-          <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+        <div className="mb-5 grid grid-cols-[120px_1fr] items-start gap-4 border-t border-zinc-100 pt-4">
+          <span className="pdf-block text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             Experience
           </span>
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4">
             {experience.map((exp) => (
               <div key={exp.id} className="pdf-block text-xs">
                 <div className="mb-0.5 flex items-baseline justify-between">
@@ -94,11 +94,11 @@ export default function MinimalTemplate({ data }: TemplateProps) {
 
       {/* Education */}
       {education && education.length > 0 && (
-        <div className="mb-6 grid grid-cols-[140px_1fr] gap-4 border-t border-zinc-100 pt-5">
+        <div className="mb-5 grid grid-cols-[120px_1fr] items-start gap-4 border-t border-zinc-100 pt-4">
           <span className="pdf-block text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             Education
           </span>
-          <div className="flex flex-col gap-4.5">
+          <div className="flex flex-col gap-4">
             {education.map((edu) => (
               <div key={edu.id} className="pdf-block text-xs">
                 <div className="mb-0.5 flex items-baseline justify-between">
@@ -130,13 +130,13 @@ export default function MinimalTemplate({ data }: TemplateProps) {
       {((skills.technical && skills.technical.length > 0) ||
         (skills.soft && skills.soft.length > 0) ||
         (skills.languages && skills.languages.length > 0)) && (
-        <div className="pdf-block mb-6 grid grid-cols-[140px_1fr] gap-4 border-t border-zinc-100 pt-5">
-          <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+        <div className="mb-5 grid grid-cols-[120px_1fr] items-start gap-4 border-t border-zinc-100 pt-4">
+          <span className="pdf-block text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             Skills
           </span>
           <div className="space-y-2.5 text-xs font-light text-zinc-600">
             {skills.technical && skills.technical.length > 0 && (
-              <p>
+              <p className="pdf-block">
                 <strong className="mb-0.5 block text-[10px] font-semibold tracking-wider text-zinc-800 uppercase">
                   Technical
                 </strong>{" "}
@@ -144,7 +144,7 @@ export default function MinimalTemplate({ data }: TemplateProps) {
               </p>
             )}
             {skills.soft && skills.soft.length > 0 && (
-              <p>
+              <p className="pdf-block">
                 <strong className="mb-0.5 block text-[10px] font-semibold tracking-wider text-zinc-800 uppercase">
                   Professional
                 </strong>{" "}
@@ -152,7 +152,7 @@ export default function MinimalTemplate({ data }: TemplateProps) {
               </p>
             )}
             {skills.languages && skills.languages.length > 0 && (
-              <p>
+              <p className="pdf-block">
                 <strong className="mb-0.5 block text-[10px] font-semibold tracking-wider text-zinc-800 uppercase">
                   Languages
                 </strong>{" "}
@@ -165,8 +165,8 @@ export default function MinimalTemplate({ data }: TemplateProps) {
 
       {/* Projects */}
       {projects && projects.length > 0 && (
-        <div className="mb-6 grid grid-cols-[140px_1fr] gap-4 border-t border-zinc-100 pt-5">
-          <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+        <div className="mb-5 grid grid-cols-[120px_1fr] items-start gap-4 border-t border-zinc-100 pt-4">
+          <span className="pdf-block text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             Projects
           </span>
           <div className="flex flex-col gap-4">
@@ -201,11 +201,11 @@ export default function MinimalTemplate({ data }: TemplateProps) {
 
       {/* Certifications */}
       {certifications && certifications.length > 0 && (
-        <div className="mb-6 grid grid-cols-[140px_1fr] gap-4 border-t border-zinc-100 pt-5">
-          <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+        <div className="mb-5 grid grid-cols-[120px_1fr] items-start gap-4 border-t border-zinc-100 pt-4">
+          <span className="pdf-block text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             Certificates
           </span>
-          <div className="text-xs font-light text-zinc-600">
+          <div className="space-y-2.5 text-xs font-light text-zinc-600">
             {certifications.map((cert) => (
               <div
                 key={cert.id}
@@ -230,10 +230,13 @@ export default function MinimalTemplate({ data }: TemplateProps) {
 
       {/* Additional Sections */}
       {additionalSections && additionalSections.length > 0 && (
-        <div className="flex flex-col gap-5 border-t border-zinc-100 pt-5">
+        <div className="flex flex-col gap-5 border-t border-zinc-100 pt-4">
           {additionalSections.map((sect) => (
-            <div key={sect.id} className="grid grid-cols-[140px_1fr] gap-4">
-              <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+            <div
+              key={sect.id}
+              className="grid grid-cols-[120px_1fr] items-start gap-4"
+            >
+              <span className="pdf-block text-xs font-semibold tracking-wider text-zinc-400 uppercase">
                 {sect.title}
               </span>
               <ul className="list-disc space-y-1.5 pl-4 text-xs font-light text-zinc-600">

@@ -1,24 +1,52 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { blogPosts, getPostCatColor } from "../../../data/blog";
-import { ArrowLeft, Clock, Calendar, MoveLeft } from "lucide-react";
+import { Clock, Calendar, MoveLeft } from "lucide-react";
 import BlogContent from "../../../components/blog/BlogContent";
 import { cn } from "@/lib/utils";
+import { Metadata, ResolvingMetadata } from "next";
+import Image from "next/image";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata,
+): Promise<Metadata> {
+  // read route params
+  const { slug } = await params;
+
+  // fetch Blog
+  const blog = fetchBlog(slug);
+  if (!blog) notFound();
+
+  // optionally access and extend (rather than replace) parent metadata
+  const previousImages = (await parent).openGraph?.images || [];
+  const previousKeywords = (await parent).keywords || [];
+
+  return {
+    title: blog.title,
+    openGraph: {
+      images: blog.image ? [blog.image, ...previousImages] : previousImages,
+    },
+    keywords: [blog.category, ...previousKeywords],
+  };
+}
+
+const fetchBlog = (slug: string) => blogPosts.find((b) => b.slug === slug);
+
 export default async function BlogArticlePage({ params }: Props) {
   const { slug } = await params;
-  const post = blogPosts.find((p) => p.slug === slug);
+  const post = fetchBlog(slug);
 
   if (!post) {
     notFound();
   }
 
   return (
-    <div className="wrapper max-w-4xl flex-1 py-12 md:py-16">
+    <div className="wrapper max-w-5xl flex-1 py-12 md:py-16">
       {/* Back Button */}
       <Link
         href="/blog"
@@ -39,7 +67,7 @@ export default async function BlogArticlePage({ params }: Props) {
           {post.category}
         </span>
 
-        <h1 className="font-display text-primary mb-6 text-3xl leading-tight font-extrabold sm:text-4xl">
+        <h1 className="font-display text-primary mb-6 text-3xl leading-tight font-extrabold text-balance sm:text-4xl">
           {post.title}
         </h1>
 
@@ -77,6 +105,19 @@ export default async function BlogArticlePage({ params }: Props) {
       </header>
 
       {/* Main content client wrapper */}
+      {post.image && (
+        <div className="rounded-card relative mb-6 aspect-video overflow-clip border-zinc-200 bg-zinc-50 shadow-xl">
+          <Image
+            alt={post.title}
+            src={post.image}
+            fill
+            sizes="100%"
+            className="object-cover object-center"
+            loading="eager"
+          />
+        </div>
+      )}
+
       <BlogContent post={post} />
     </div>
   );

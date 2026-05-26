@@ -20,22 +20,22 @@ export default function ClassicTemplate({ data }: TemplateProps) {
 
   return (
     <div
-      className="p-2 font-serif leading-relaxed text-[#1e293b]"
+      className="p-1 text-justify font-serif leading-relaxed text-[#1e293b]"
       style={{ wordBreak: "break-word" }}
     >
       {/* Header Info */}
-      <div className="pdf-block mb-6 text-center">
+      <header className="pdf-block mb-5 text-center">
         <h1
-          className="font-display mb-1 text-3xl font-bold tracking-wide uppercase"
+          className="font-display mb-0.5 text-3xl font-bold tracking-wide uppercase"
           style={{ color: accentColor }}
         >
           {personalInfo.fullName || "Your Name"}
         </h1>
-        <p className="text-md mb-3 font-sans text-zinc-600 italic">
+        <p className="mb-2.5 font-sans text-base text-zinc-600 italic">
           {personalInfo.jobTitle || "Professional Title"}
         </p>
 
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-sans text-xs text-zinc-600">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-sans text-xs text-zinc-600">
           {personalInfo.email && <span>{personalInfo.email}</span>}
           {personalInfo.phone && (
             <>
@@ -62,7 +62,7 @@ export default function ClassicTemplate({ data }: TemplateProps) {
             </>
           )}
         </div>
-      </div>
+      </header>
 
       {/* Profile Summary */}
       {summary && (
@@ -91,7 +91,7 @@ export default function ClassicTemplate({ data }: TemplateProps) {
           <div className="flex flex-col gap-4">
             {experience.map((exp) => (
               <div key={exp.id} className="pdf-block text-sm">
-                <div className="mb-1 flex items-baseline justify-between font-sans font-semibold text-zinc-800">
+                <div className="mb-0.5 flex items-baseline justify-between font-sans font-semibold text-zinc-800">
                   <span>
                     {exp.jobTitle}{" "}
                     <span className="font-normal text-zinc-500">at</span>{" "}
@@ -123,7 +123,7 @@ export default function ClassicTemplate({ data }: TemplateProps) {
       {education && education.length > 0 && (
         <div className="mb-6">
           <h2
-            className="mb-3 border-b border-zinc-300 pb-1 font-sans text-xs font-bold tracking-widest uppercase"
+            className="mb-2 border-b border-zinc-300 pb-1 font-sans text-xs font-bold tracking-widest uppercase"
             style={{ color: accentColor }}
           >
             Education
@@ -162,7 +162,7 @@ export default function ClassicTemplate({ data }: TemplateProps) {
         (skills.languages && skills.languages.length > 0)) && (
         <div className="pdf-block mb-6">
           <h2
-            className="mb-2.5 border-b border-zinc-300 pb-1 font-sans text-xs font-bold tracking-widest uppercase"
+            className="mb-2 border-b border-zinc-300 pb-1 font-sans text-xs font-bold tracking-widest uppercase"
             style={{ color: accentColor }}
           >
             Skills & Expertise
@@ -200,22 +200,22 @@ export default function ClassicTemplate({ data }: TemplateProps) {
       {projects && projects.length > 0 && (
         <div className="mb-6">
           <h2
-            className="mb-3 border-b border-zinc-300 pb-1 font-sans text-xs font-bold tracking-widest uppercase"
+            className="mb-2 border-b border-zinc-300 pb-1 font-sans text-xs font-bold tracking-widest uppercase"
             style={{ color: accentColor }}
           >
             Key Projects
           </h2>
-          <div className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-4">
             {projects.map((proj) => (
               <div key={proj.id} className="pdf-block text-sm">
-                <div className="mb-1 flex items-baseline justify-between font-sans font-semibold text-zinc-800">
+                <div className="mb-0.5 flex items-baseline justify-between font-sans font-semibold text-zinc-800">
                   <span>{proj.name}</span>
                   <div className="space-x-2 text-xs font-normal text-zinc-500">
                     {proj.liveUrl && <span>{proj.liveUrl}</span>}
                     {proj.githubUrl && <span>{proj.githubUrl}</span>}
                   </div>
                 </div>
-                <p className="mb-1.5 text-[13px] leading-relaxed text-zinc-700">
+                <p className="mb-1 text-[13px] leading-relaxed text-zinc-700">
                   {proj.description}
                 </p>
                 {proj.techStack && proj.techStack.length > 0 && (
@@ -236,7 +236,7 @@ export default function ClassicTemplate({ data }: TemplateProps) {
       {certifications && certifications.length > 0 && (
         <div className="mb-6">
           <h2
-            className="mb-2.5 border-b border-zinc-300 pb-1 font-sans text-xs font-bold tracking-widest uppercase"
+            className="mb-2 border-b border-zinc-300 pb-1 font-sans text-xs font-bold tracking-widest uppercase"
             style={{ color: accentColor }}
           >
             Certifications
@@ -261,11 +261,11 @@ export default function ClassicTemplate({ data }: TemplateProps) {
 
       {/* Additional Sections */}
       {additionalSections && additionalSections.length > 0 && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3.5">
           {additionalSections.map((sect) => (
             <div key={sect.id} className="mb-2">
               <h2
-                className="mb-2.5 border-b border-zinc-300 pb-1 font-sans text-xs font-bold tracking-widest uppercase"
+                className="mb-2 border-b border-zinc-300 pb-1 font-sans text-xs font-bold tracking-widest uppercase"
                 style={{ color: accentColor }}
               >
                 {sect.title}

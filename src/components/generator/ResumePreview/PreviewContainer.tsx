@@ -229,12 +229,12 @@ export default function PreviewContainer() {
           <section
             ref={previewRef}
             id="resume-preview-document"
-            className="relative box-border min-h-[297mm] w-[210mm] bg-white p-[20mm] text-left text-zinc-800"
+            className="relative box-border min-h-[297mm] w-[210mm] bg-white p-[15mm] text-left text-zinc-800"
           >
             {/* Visual Indicator of A4 page fold (Dashed indicator, not exported by canvas) */}
             {Array.from({ length: pageCount }).map((_, index) => {
               const pageNumber = index + 1;
-              const topPositionMm = index * 297 + 288;
+              const topPositionMm = index * 297 + 282;
               return (
                 <div
                   key={pageNumber}

@@ -25,6 +25,19 @@ export const metadata: Metadata = {
   title: "CareerCraft — Your Premium Career Launchpad",
   description:
     "Craft professional resumes, review insider resume and interview tips, study step-by-step career guides, drill Q&A questions, and read career articles.",
+  applicationName: "CareerCraft",
+  openGraph: {
+    type: "website",
+    title: "CareerCraft — Your Premium Career Launchpad",
+    description:
+      "Craft professional resumes, review insider resume and interview tips, study step-by-step career guides, drill Q&A questions, and read career articles.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CareerCraft — Your Premium Career Launchpad",
+    description:
+      "Craft professional resumes, review insider resume and interview tips, study step-by-step career guides, drill Q&A questions, and read career articles.",
+  },
 };
 
 export default function RootLayout({

@@ -25,7 +25,7 @@ export default function ModernTemplate({ data }: TemplateProps) {
     >
       {/* Top Header Panel */}
       <main
-        className="pdf-block mb-6 flex items-center justify-between gap-6 border-b-4 pb-5"
+        className="pdf-block mb-5 flex items-center justify-between gap-6 border-b-3 pb-4"
         style={{ borderColor: accentColor }}
       >
         <div className="flex-1">
@@ -112,8 +112,8 @@ export default function ModernTemplate({ data }: TemplateProps) {
 
           {/* Education */}
           {education && education.length > 0 && (
-            <main className="flex flex-col gap-3">
-              <h3 className="mb-1 text-xs font-bold tracking-widest text-zinc-400 uppercase">
+            <main className="flex flex-col gap-2">
+              <h3 className="text-xs font-bold tracking-widest text-zinc-400 uppercase">
                 Education
               </h3>
 
@@ -147,7 +147,7 @@ export default function ModernTemplate({ data }: TemplateProps) {
             (skills.soft && skills.soft.length > 0) ||
             (skills.languages && skills.languages.length > 0)) && (
             <main className="flex flex-col gap-4">
-              <h3 className="text-xs font-bold tracking-widest text-zinc-400 uppercase">
+              <h3 className="pdf-block -mb-2 text-xs font-bold tracking-widest text-zinc-400 uppercase">
                 Skills
               </h3>
 
@@ -156,7 +156,7 @@ export default function ModernTemplate({ data }: TemplateProps) {
                   <span className="mb-1 block text-[10px] font-semibold text-zinc-400 uppercase">
                     Technical
                   </span>
-                  <ul className="flex flex-wrap gap-1">
+                  <ul className="flex flex-wrap gap-1.25">
                     {skills.technical.map((tag, idx) => (
                       <li
                         key={idx}
@@ -174,7 +174,7 @@ export default function ModernTemplate({ data }: TemplateProps) {
                   <span className="mb-1 block text-[10px] font-semibold text-zinc-400 uppercase">
                     Professional
                   </span>
-                  <ul className="flex flex-wrap gap-1">
+                  <ul className="flex flex-wrap gap-1.25">
                     {skills.soft.map((tag, idx) => (
                       <li
                         key={idx}
@@ -192,7 +192,7 @@ export default function ModernTemplate({ data }: TemplateProps) {
                   <span className="mb-1 block text-[10px] font-semibold text-zinc-400 uppercase">
                     Languages
                   </span>
-                  <ul className="flex flex-wrap gap-1">
+                  <ul className="flex flex-wrap gap-1.25">
                     {skills.languages.map((tag, idx) => (
                       <li
                         key={idx}
@@ -209,16 +209,16 @@ export default function ModernTemplate({ data }: TemplateProps) {
 
           {/* Certifications */}
           {certifications && certifications.length > 0 && (
-            <div className="flex flex-col gap-2.5">
-              <h3 className="mb-1 text-xs font-bold tracking-widest text-zinc-400 uppercase">
+            <div className="flex flex-col gap-2">
+              <h3 className="text-xs font-bold tracking-widest text-zinc-400 uppercase">
                 Certificates
               </h3>
 
-              <ul className="gap-2.5">
+              <ul className="flex flex-col gap-3.5">
                 {certifications.map((cert) => (
                   <li
                     key={cert.id}
-                    className="pdf-block border-b border-zinc-100 pb-1 text-xs"
+                    className="pdf-block border-zinc-100 text-xs"
                   >
                     <p className="font-semibold text-zinc-800">{cert.name}</p>
                     <p className="text-[11px] text-zinc-500">
@@ -252,7 +252,7 @@ export default function ModernTemplate({ data }: TemplateProps) {
           {experience && experience.length > 0 && (
             <div>
               <h3
-                className="mb-3 border-b border-zinc-200 pb-1.5 text-sm font-bold text-zinc-800"
+                className="mb-2.5 border-b border-zinc-200 pb-1.5 text-sm font-bold text-zinc-800"
                 style={{ color: accentColor }}
               >
                 Work History
@@ -289,12 +289,12 @@ export default function ModernTemplate({ data }: TemplateProps) {
           {projects && projects.length > 0 && (
             <div>
               <h3
-                className="mb-3 border-b border-zinc-200 pb-1.5 text-sm font-bold text-zinc-800"
+                className="mb-2.5 border-b border-zinc-200 pb-1.5 text-sm font-bold text-zinc-800"
                 style={{ color: accentColor }}
               >
                 Featured Projects
               </h3>
-              <div className="flex flex-col gap-3.5">
+              <div className="flex flex-col gap-4">
                 {projects.map((proj) => (
                   <div key={proj.id} className="pdf-block text-xs">
                     <span className="font-bold text-zinc-800">{proj.name}</span>

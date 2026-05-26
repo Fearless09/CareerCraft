@@ -9,6 +9,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### Planned
+
 - Dark mode toggle (Tailwind dark variant + user preference persisted in localStorage)
 - User authentication via email and OAuth (Phase 2)
 - Cloud resume storage with PostgreSQL via Prisma (Phase 2)

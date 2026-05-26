@@ -10,6 +10,7 @@ export interface BlogPost {
     role: string;
     avatar: string;
   };
+  image?: string;
   content: string; // Markdown formatted content
 }
 
@@ -32,8 +33,11 @@ export const getPostCatColor = (
   }
 };
 
+// Good, help me generate another professional blog post image (something good for opengraph and seo) for: Salary Negotiation: What to Say (and What Not to Say), Negotiating an offer starts during the first call. Learn standard scripts, market research strategies, and how to evaluate comprehensive packages.
+
 export const blogPosts: BlogPost[] = [
   {
+    image: "/blog/resume-mistakes-2026.png",
     slug: "resume-mistakes-2026",
     title: "10 Resume Mistakes That Are Costing You Interviews in 2026",
     excerpt:
@@ -71,6 +75,7 @@ Keep your resume tight. For candidates with under 5 years of experience, a singl
     `,
   },
   {
+    image: "/blog/mastering-star-method.png",
     slug: "mastering-star-method",
     title: "The STAR Method: Answering Behavioral Questions Like a Pro",
     excerpt:
@@ -109,6 +114,7 @@ Conclude with a quantitative business outcome. Never end a story without a metri
     `,
   },
   {
+    image: "/blog/ats-in-2026-whats-changed.png",
     slug: "ats-in-2026-whats-changed",
     title: "ATS in 2026: What's Changed and How to Beat It",
     excerpt:
@@ -139,6 +145,7 @@ Avoid complex layouts, tables, and images. Modern parsers prefer standard, simpl
     `,
   },
   {
+    image: "/blog/salary-negotiation-strategies.png",
     slug: "salary-negotiation-strategies",
     title: "Salary Negotiation: What to Say (and What Not to Say)",
     excerpt:

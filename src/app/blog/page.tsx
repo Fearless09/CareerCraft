@@ -12,8 +12,10 @@ import {
   MessageSquare,
   Tag,
   Eye,
+  ImageIcon,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import Image from "next/image";
 
 const categories = ["All", ...new Set(blogPosts.map((b) => b.category))];
 
@@ -125,69 +127,86 @@ export default function BlogListingPage() {
             return (
               <article
                 key={post.slug}
-                className="transition-300 flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow hover:-translate-y-0.5 hover:shadow-md sm:p-8"
+                className="transition-300 group flex flex-col overflow-clip rounded-2xl border border-zinc-200 bg-white shadow hover:-translate-y-0.5 hover:shadow-md"
               >
-                {/* Meta details */}
-                <div className="mb-4 flex items-center justify-between gap-4">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[9px] font-extrabold tracking-wider uppercase",
-                      getPostCatColor(post.category),
-                    )}
-                  >
-                    <Tag className="size-3" />
-                    {post.category}
-                  </span>
-
-                  {isRead && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
-                      <Eye className="size-3.5" />
-                      Read
-                    </span>
+                <div className="relative flex aspect-video overflow-clip bg-zinc-50 text-zinc-500">
+                  {post.image ? (
+                    <Image
+                      alt={post.slug}
+                      src={post.image}
+                      fill
+                      sizes="100%"
+                      className="transition-300 group-hover:scale-105"
+                      loading="eager"
+                    />
+                  ) : (
+                    <ImageIcon className="m-auto size-12" />
                   )}
                 </div>
 
-                {/* Title */}
-                <Link
-                  className="font-display text-primary hover:text-accent transition-300 mb-3 text-xl leading-snug font-bold"
-                  href={`/blog/${post.slug}`}
-                >
-                  {post.title}
-                </Link>
-
-                {/* Excerpt */}
-                <p className="font-body mb-6 flex-1 text-sm leading-relaxed text-zinc-500">
-                  {post.excerpt}
-                </p>
-
-                {/* Footer details */}
-                <div className="flex items-center justify-between border-t border-zinc-100 pt-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-primary font-display flex size-8.5 items-center justify-center rounded-full border border-zinc-300 bg-zinc-200 text-xs font-bold uppercase">
-                      {post.author.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+                <div className="flex flex-1 flex-col p-6 pt-4! sm:p-8">
+                  {/* Meta details */}
+                  <div className="mb-4 flex items-center justify-between gap-4">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[9px] font-extrabold tracking-wider uppercase",
+                        getPostCatColor(post.category),
+                      )}
+                    >
+                      <Tag className="size-3" />
+                      {post.category}
                     </span>
-                    <div className="font-semibold">
-                      <span className="text-primary block text-xs font-bold">
-                        {post.author.name}
+
+                    {isRead && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                        <Eye className="size-3.5" />
+                        Read
                       </span>
-                      <span className="block text-[10px] text-zinc-500">
-                        {post.author.role}
-                      </span>
-                    </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-4 text-[10px] font-medium text-zinc-500">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="size-3.5" />
-                      {post.publishDate}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="size-3.5" />
-                      {post.readTime}
-                    </span>
+                  {/* Title */}
+                  <Link
+                    className="font-display text-primary hover:text-accent transition-300 mb-3 text-xl leading-snug font-bold"
+                    href={`/blog/${post.slug}`}
+                  >
+                    {post.title}
+                  </Link>
+
+                  {/* Excerpt */}
+                  <p className="font-body mb-6 flex-1 text-sm leading-relaxed text-zinc-500">
+                    {post.excerpt}
+                  </p>
+
+                  {/* Footer details */}
+                  <div className="flex items-center justify-between border-t border-zinc-100 pt-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-primary font-display flex size-8.5 items-center justify-center rounded-full border border-zinc-300 bg-zinc-200 text-xs font-bold uppercase">
+                        {post.author.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </span>
+                      <div className="font-semibold">
+                        <span className="text-primary block text-xs font-bold">
+                          {post.author.name}
+                        </span>
+                        <span className="block text-[10px] text-zinc-500">
+                          {post.author.role}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-[10px] font-medium text-zinc-500">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="size-3.5" />
+                        {post.publishDate}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="size-3.5" />
+                        {post.readTime}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </article>

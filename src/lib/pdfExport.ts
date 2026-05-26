@@ -36,9 +36,9 @@ export async function exportResumeToPDF(
     const elementWidth = clone.offsetWidth;
     const pxPerMm = elementWidth / 210;
     const pageHeightPx = 297 * pxPerMm;
-    const paddingTopPx = 20 * pxPerMm;     // 20mm padding top
-    const paddingBottomPx = 20 * pxPerMm;  // 20mm padding bottom
-    const usablePageHeightPx = pageHeightPx - paddingTopPx - paddingBottomPx; // 257mm
+    const paddingTopPx = 15 * pxPerMm; // 15mm padding top
+    const paddingBottomPx = 13 * pxPerMm; // 15mm padding bottom
+    const usablePageHeightPx = pageHeightPx - paddingTopPx - paddingBottomPx; // 267mm
 
     // Let's query all blocks that we want to prevent from breaking in the middle (e.g. experience cards, sections, headings)
     const blocks = Array.from(
