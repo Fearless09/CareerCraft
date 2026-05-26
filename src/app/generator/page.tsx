@@ -88,29 +88,6 @@ export default function GeneratorPage() {
     addToast("Professional sample resume preseeded successfully!", "success");
   };
 
-  const renderActiveStepForm = () => {
-    switch (currentStep) {
-      case 1:
-        return <PersonalInfoSection />;
-      case 2:
-        return <SummarySection />;
-      case 3:
-        return <ExperienceSection />;
-      case 4:
-        return <EducationSection />;
-      case 5:
-        return <SkillsSection />;
-      case 6:
-        return <ProjectsSection />;
-      case 7:
-        return <CertificationsSection />;
-      case 8:
-        return <AdditionalSections />;
-      default:
-        return <PersonalInfoSection />;
-    }
-  };
-
   const progressPercent = (currentStep / 8) * 100;
 
   return (
@@ -216,7 +193,7 @@ export default function GeneratorPage() {
 
           {/* Form Content Wrapper */}
           <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6 md:mt-3">
-            {renderActiveStepForm()}
+            {renderActiveStepForm(currentStep)}
           </main>
 
           {/* Stepper Footer Console Bar */}
@@ -313,3 +290,26 @@ const tabs = [
   },
   { preview: true, icon: Eye, name: "Live Preview" },
 ];
+
+const renderActiveStepForm = (currentStep: number) => {
+  switch (currentStep) {
+    case 1:
+      return <PersonalInfoSection />;
+    case 2:
+      return <SummarySection />;
+    case 3:
+      return <ExperienceSection />;
+    case 4:
+      return <EducationSection />;
+    case 5:
+      return <SkillsSection />;
+    case 6:
+      return <ProjectsSection />;
+    case 7:
+      return <CertificationsSection />;
+    case 8:
+      return <AdditionalSections />;
+    default:
+      return <PersonalInfoSection />;
+  }
+};

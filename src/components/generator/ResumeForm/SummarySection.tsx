@@ -66,8 +66,8 @@ export default function SummarySection() {
         {/* Dynamic Character Constraint Progress Bar */}
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
           <div
-            className={cn(`transition-300 bg-accent h-full max-w-full`, {
-              "bg-amber-500": isNearLimit,
+            className={cn(`transition-300 h-full max-w-full bg-amber-500`, {
+              "bg-accent": isNearLimit,
               "bg-red-500": isOverLimit,
             })}
             style={{
