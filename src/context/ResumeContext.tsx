@@ -8,6 +8,7 @@ import {
   ReactNode,
   useCallback,
 } from "react";
+import { useSession } from "next-auth/react";
 import {
   ResumeData,
   ExperienceEntry,
@@ -87,29 +88,99 @@ const emptyResume: ResumeData = {
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 
 export function ResumeProvider({ children }: { children: ReactNode }) {
-  const [resumeData, setResumeData] = useState<ResumeData>(sampleResume); // default to beautiful preseeded sample data
+  const { data: session, status } = useSession();
+  const [resumeData, setResumeData] = useState<ResumeData>(sampleResume);
   const [currentStep, setCurrentStepState] = useState<number>(1);
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
-  // Hydrate states from localStorage on mount
+  // 1. Hydrate states (Authenticated DB fetch or Unauthenticated localStorage)
   useEffect(() => {
-    const storedData = getStorageItem<ResumeData>(STORAGE_KEY, sampleResume);
-    const storedStep = getStorageItem<number>(STEP_STORAGE_KEY, 1);
-    setResumeData(storedData);
-    setCurrentStepState(storedStep);
-    setIsHydrated(true);
-  }, []);
+    if (status === "loading") return;
 
-  // Sync back to localStorage with simple write debounce
+    const hydrate = async () => {
+      // Step indicator is client-only UI state, load from localStorage
+      const storedStep = getStorageItem<number>(STEP_STORAGE_KEY, 1);
+      setCurrentStepState(storedStep);
+
+      const localData = getStorageItem<ResumeData>(STORAGE_KEY, sampleResume);
+
+      if (status === "authenticated") {
+        try {
+          setIsHydrated(false);
+          const res = await fetch("/api/resume");
+          if (res.ok) {
+            const { resume } = await res.json();
+            const userResume = resume as ResumeData | null;
+            if (userResume) {
+              // Found database-stored resume, use it
+              setResumeData(userResume);
+            } else {
+              // No DB resume found. Check if localData holds actual user input and migrate it to DB
+              const isLocalModified =
+                JSON.stringify(localData) !== JSON.stringify(emptyResume) &&
+                JSON.stringify(localData) !== JSON.stringify(sampleResume);
+
+              if (isLocalModified) {
+                console.log(
+                  "Migrating local draft resume to cloud database...",
+                );
+                await fetch("/api/resume", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ resumeData: localData }),
+                });
+              }
+              setResumeData(localData);
+            }
+          } else {
+            setResumeData(localData);
+          }
+        } catch (error) {
+          console.error(
+            "Failed to fetch resume from database, falling back to local storage:",
+            error,
+          );
+          setResumeData(localData);
+        } finally {
+          setIsHydrated(true);
+        }
+      } else {
+        // Unauthenticated -> Use localStorage
+        setResumeData(localData);
+        setIsHydrated(true);
+      }
+    };
+
+    hydrate();
+  }, [status, session]);
+
+  // 2. Debounced sync to database (if authenticated) and local safety net (always)
   useEffect(() => {
-    if (isHydrated) {
-      const handler = setTimeout(() => {
-        setStorageItem(STORAGE_KEY, resumeData);
-      }, 500);
-      return () => clearTimeout(handler);
-    }
-  }, [resumeData, isHydrated]);
+    if (!isHydrated) return;
+
+    const handler = setTimeout(async () => {
+      // Always store locally as fallback
+      setStorageItem(STORAGE_KEY, resumeData);
+
+      if (status === "authenticated") {
+        try {
+          await fetch("/api/resume", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ resumeData }),
+          });
+        } catch (error) {
+          console.error(
+            "Failed to automatically synchronize resume with DB:",
+            error,
+          );
+        }
+      }
+    }, 1000); // 1000ms debounce to prevent database query overhead
+
+    return () => clearTimeout(handler);
+  }, [resumeData, isHydrated, status]);
 
   const setCurrentStep = useCallback((step: number) => {
     setCurrentStepState(step);

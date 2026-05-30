@@ -7,6 +7,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
+import { useSession } from "next-auth/react";
 import { UserProgress } from "../types/resume";
 import { getStorageItem, setStorageItem } from "../lib/localStorage";
 
@@ -34,25 +35,113 @@ const ProgressContext = createContext<ProgressContextType | undefined>(
 );
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession();
   const [progress, setProgress] = useState<UserProgress>(initialProgress);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Load from localStorage on mount
+  // 1. Hydrate states (Authenticated DB fetch or Unauthenticated localStorage)
   useEffect(() => {
-    const stored = getStorageItem<UserProgress>(STORAGE_KEY, initialProgress);
-    setProgress({
-      ...stored,
-      lastVisited: new Date().toISOString(),
-    });
-    setIsHydrated(true);
-  }, []);
+    if (status === "loading") return;
 
-  // Save to localStorage when progress changes
+    const hydrate = async () => {
+      const localData = getStorageItem<UserProgress>(
+        STORAGE_KEY,
+        initialProgress,
+      );
+
+      if (status === "authenticated") {
+        try {
+          setIsHydrated(false);
+          const res = await fetch("/api/progress");
+          if (res.ok) {
+            const { progress } = await res.json();
+            const cloudData = progress as UserProgress | null;
+            if (cloudData) {
+              // Found database-stored progress, hydrate
+              setProgress({
+                ...cloudData,
+                lastVisited: new Date().toISOString(),
+              });
+            } else {
+              // No DB progress found. Check if localData holds actual data to migrate
+              const isLocalModified =
+                localData.resumeCompletedSections.length > 0 ||
+                localData.practiceQuestionsAnswered.length > 0 ||
+                localData.bookmarkedQuestions.length > 0 ||
+                localData.blogArticlesRead.length > 0;
+
+              if (isLocalModified) {
+                console.log(
+                  "Migrating local learning progress to cloud database...",
+                );
+                await fetch("/api/progress", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ progressData: localData }),
+                });
+              }
+              setProgress({
+                ...localData,
+                lastVisited: new Date().toISOString(),
+              });
+            }
+          } else {
+            setProgress({
+              ...localData,
+              lastVisited: new Date().toISOString(),
+            });
+          }
+        } catch (error) {
+          console.error(
+            "Failed to fetch progress from database, falling back to local storage:",
+            error,
+          );
+          setProgress({
+            ...localData,
+            lastVisited: new Date().toISOString(),
+          });
+        } finally {
+          setIsHydrated(true);
+        }
+      } else {
+        // Unauthenticated -> Use localStorage
+        setProgress({
+          ...localData,
+          lastVisited: new Date().toISOString(),
+        });
+        setIsHydrated(true);
+      }
+    };
+
+    hydrate();
+  }, [status, session]);
+
+  // 2. Debounced sync to database (if authenticated) and local safety net (always)
   useEffect(() => {
-    if (isHydrated) {
+    if (!isHydrated) return;
+
+    const handler = setTimeout(async () => {
+      // Always store locally as fallback
       setStorageItem(STORAGE_KEY, progress);
-    }
-  }, [progress, isHydrated]);
+
+      if (status === "authenticated") {
+        try {
+          await fetch("/api/progress", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ progressData: progress }),
+          });
+        } catch (error) {
+          console.error(
+            "Failed to automatically synchronize progress with DB:",
+            error,
+          );
+        }
+      }
+    }, 1000); // 1000ms debounce to prevent database query overhead
+
+    return () => clearTimeout(handler);
+  }, [progress, isHydrated, status]);
 
   const markSectionComplete = (sectionId: string) => {
     setProgress((prev) => {
