@@ -137,10 +137,6 @@ export const admins = pgTable("admin", {
   userId: text("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  name: text("name"),
-  email: text("email").unique(),
-  emailVerified: timestamp("emailVerified", { mode: "date" }),
-  image: text("image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

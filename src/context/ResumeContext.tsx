@@ -20,6 +20,8 @@ import {
 } from "../types/resume";
 import { getStorageItem, setStorageItem } from "../lib/localStorage";
 import { sampleResume } from "@/data/sampleResume";
+import { apiRequest } from "@/lib/utils";
+import useSWR from "swr";
 
 interface ResumeContextType {
   resumeData: ResumeData;
@@ -88,59 +90,65 @@ const emptyResume: ResumeData = {
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 
 export function ResumeProvider({ children }: { children: ReactNode }) {
-  const { data: session, status } = useSession();
-  const [resumeData, setResumeData] = useState<ResumeData>(sampleResume);
+  const {
+    data: res,
+    isLoading,
+    error,
+    mutate,
+  } = useSWR<{ resume: ResumeData }, Error>("/api/resume", apiRequest);
+
+  const { status } = useSession();
+  const [resumeData, setResumeData] = useState<ResumeData>(emptyResume);
   const [currentStep, setCurrentStepState] = useState<number>(1);
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
   // 1. Hydrate states (Authenticated DB fetch or Unauthenticated localStorage)
   useEffect(() => {
-    if (status === "loading") return;
+    if (status === "loading" || isLoading) return;
 
     const hydrate = async () => {
       // Step indicator is client-only UI state, load from localStorage
       const storedStep = getStorageItem<number>(STEP_STORAGE_KEY, 1);
       setCurrentStepState(storedStep);
 
-      const localData = getStorageItem<ResumeData>(STORAGE_KEY, sampleResume);
+      const localData = getStorageItem<ResumeData>(STORAGE_KEY, emptyResume);
 
       if (status === "authenticated") {
         try {
           setIsHydrated(false);
-          const res = await fetch("/api/resume");
-          if (res.ok) {
-            const { resume } = await res.json();
-            const userResume = resume as ResumeData | null;
-            if (userResume) {
-              // Found database-stored resume, use it
-              setResumeData(userResume);
-            } else {
-              // No DB resume found. Check if localData holds actual user input and migrate it to DB
-              const isLocalModified =
-                JSON.stringify(localData) !== JSON.stringify(emptyResume) &&
-                JSON.stringify(localData) !== JSON.stringify(sampleResume);
+          if (error) {
+            const msg =
+              error instanceof Error
+                ? error.message
+                : "Failed to fetch resume from database, falling back to local storage:";
 
-              if (isLocalModified) {
-                console.log(
-                  "Migrating local draft resume to cloud database...",
-                );
-                await fetch("/api/resume", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ resumeData: localData }),
-                });
-              }
-              setResumeData(localData);
-            }
+            console.error(msg, error);
+            setResumeData(localData);
+          } else if (res?.resume) {
+            // Found database-stored resume, use it
+            setResumeData(res.resume);
           } else {
+            // No DB resume found. Check if localData holds actual user input and migrate it to DB
+            const isLocalModified =
+              JSON.stringify(localData) !== JSON.stringify(emptyResume) &&
+              JSON.stringify(localData) !== JSON.stringify(sampleResume);
+
+            if (isLocalModified) {
+              console.log("Migrating local draft resume to cloud database...");
+              await apiRequest<{ success: boolean }>("/api/resume", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ resumeData: localData }),
+              });
+              mutate({ resume: localData }, { revalidate: false });
+            }
             setResumeData(localData);
           }
         } catch (error) {
-          console.error(
-            "Failed to fetch resume from database, falling back to local storage:",
-            error,
-          );
+          const msg =
+            error instanceof Error ? error.message : "Something went wrong";
+          console.error(msg, error);
           setResumeData(localData);
         } finally {
           setIsHydrated(true);
@@ -153,7 +161,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     };
 
     hydrate();
-  }, [status, session]);
+  }, [status, isLoading]);
 
   // 2. Debounced sync to database (if authenticated) and local safety net (always)
   useEffect(() => {
@@ -165,11 +173,12 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
 
       if (status === "authenticated") {
         try {
-          await fetch("/api/resume", {
+          await apiRequest<{ success: boolean }>("/api/resume", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ resumeData }),
           });
+          mutate({ resume: resumeData }, { revalidate: false });
         } catch (error) {
           console.error(
             "Failed to automatically synchronize resume with DB:",

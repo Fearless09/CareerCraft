@@ -10,6 +10,9 @@ import {
 import { useSession } from "next-auth/react";
 import { UserProgress } from "../types/resume";
 import { getStorageItem, setStorageItem } from "../lib/localStorage";
+import { apiRequest } from "@/lib/utils";
+import { es } from "zod/locales";
+import useSWR from "swr";
 
 interface ProgressContextType {
   progress: UserProgress;
@@ -35,13 +38,20 @@ const ProgressContext = createContext<ProgressContextType | undefined>(
 );
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
-  const { data: session, status } = useSession();
+  const {
+    data: res,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<{ progress: UserProgress }, Error>("/api/progress", apiRequest);
+
+  const { status } = useSession();
   const [progress, setProgress] = useState<UserProgress>(initialProgress);
   const [isHydrated, setIsHydrated] = useState(false);
 
   // 1. Hydrate states (Authenticated DB fetch or Unauthenticated localStorage)
   useEffect(() => {
-    if (status === "loading") return;
+    if (status === "loading" || isLoading) return;
 
     const hydrate = async () => {
       const localData = getStorageItem<UserProgress>(
@@ -52,50 +62,53 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       if (status === "authenticated") {
         try {
           setIsHydrated(false);
-          const res = await fetch("/api/progress");
-          if (res.ok) {
-            const { progress } = await res.json();
-            const cloudData = progress as UserProgress | null;
-            if (cloudData) {
-              // Found database-stored progress, hydrate
-              setProgress({
-                ...cloudData,
-                lastVisited: new Date().toISOString(),
-              });
-            } else {
-              // No DB progress found. Check if localData holds actual data to migrate
-              const isLocalModified =
-                localData.resumeCompletedSections.length > 0 ||
-                localData.practiceQuestionsAnswered.length > 0 ||
-                localData.bookmarkedQuestions.length > 0 ||
-                localData.blogArticlesRead.length > 0;
 
-              if (isLocalModified) {
-                console.log(
-                  "Migrating local learning progress to cloud database...",
-                );
-                await fetch("/api/progress", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ progressData: localData }),
-                });
-              }
-              setProgress({
-                ...localData,
-                lastVisited: new Date().toISOString(),
-              });
-            }
+          if (error) {
+            const msg =
+              error instanceof Error
+                ? error.message
+                : "Failed to fetch progress from database, falling back to local storage:";
+
+            console.error(msg, error);
+            setProgress({
+              ...localData,
+              lastVisited: new Date().toISOString(),
+            });
+          } else if (res?.progress) {
+            // Found database-stored progress, hydrate
+            setProgress({
+              ...res.progress,
+              lastVisited: new Date().toISOString(),
+            });
           } else {
+            // No DB progress found. Check if localData holds actual data to migrate
+            const isLocalModified =
+              localData.resumeCompletedSections.length > 0 ||
+              localData.practiceQuestionsAnswered.length > 0 ||
+              localData.bookmarkedQuestions.length > 0 ||
+              localData.blogArticlesRead.length > 0;
+
+            if (isLocalModified) {
+              console.log(
+                "Migrating local learning progress to cloud database...",
+              );
+              await apiRequest<{ success: boolean }>("/api/progress", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ progressData: localData }),
+              });
+              mutate({ progress: localData }, { revalidate: false });
+            }
             setProgress({
               ...localData,
               lastVisited: new Date().toISOString(),
             });
           }
         } catch (error) {
-          console.error(
-            "Failed to fetch progress from database, falling back to local storage:",
-            error,
-          );
+          const msg =
+            error instanceof Error ? error.message : "Something went wrong";
+
+          console.error(msg, error);
           setProgress({
             ...localData,
             lastVisited: new Date().toISOString(),
@@ -114,7 +127,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     };
 
     hydrate();
-  }, [status, session]);
+  }, [status, isLoading]);
 
   // 2. Debounced sync to database (if authenticated) and local safety net (always)
   useEffect(() => {
@@ -126,7 +139,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
       if (status === "authenticated") {
         try {
-          await fetch("/api/progress", {
+          mutate({ progress: progress }, { revalidate: false });
+          await apiRequest<{ success: boolean }>("/api/progress", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ progressData: progress }),

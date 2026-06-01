@@ -5,6 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const fetcher = async <T>(url: string) => {
-  return await fetch(url).then((r) => r.json() as T);
+export const apiRequest = async <T>(url: string, options?: RequestInit) => {
+  return await fetch(url, options).then((r) => r.json() as T);
+  // .catch((error) => {
+  //   const msg =
+  //     error instanceof Error ? error.message : "Something went wrong";
+  //   console.error({ msg, error });
+  // });
 };
