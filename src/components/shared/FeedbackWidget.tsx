@@ -6,7 +6,7 @@ import { cn } from "../../lib/utils";
 import FeedbackModal from "./FeedbackModal";
 import { usePathname } from "next/navigation";
 
-const BLACKLISTED_URL = ["/generator"];
+const BLACKLISTED_URL = ["/generator", "/admin"];
 
 export default function FeedbackWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,12 +15,12 @@ export default function FeedbackWidget() {
   const openModal = useCallback(() => setIsOpen(true), []);
   const closeModal = useCallback(() => setIsOpen(false), []);
 
-  if (BLACKLISTED_URL.includes(pathname)) return;
+  if (BLACKLISTED_URL.some((url) => pathname.includes(url))) return;
 
   return (
     <>
       {/* Floating trigger button — bottom-left to avoid clash with toasts (bottom-right) */}
-      <main className="fixed bottom-6 left-6 z-9990">
+      <main className="fixed bottom-5.5 left-5.5 z-9990">
         <button
           id="feedback-widget-trigger"
           onClick={openModal}

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { blogPosts, getPostCatColor } from "../../../data/blog";
-import { Clock, Calendar, MoveLeft } from "lucide-react";
-import BlogContent from "../../../components/blog/BlogContent";
-import { cn } from "@/lib/utils";
+import { Clock, Calendar, MoveLeft, UserRound } from "lucide-react";
+import BlogContent from "@/components/blog/BlogContent";
+import { cn, getPostCatColor } from "@/lib/utils";
 import { Metadata, ResolvingMetadata } from "next";
 import Image from "next/image";
+import { blog, BlogPost, users } from "@/db/schema";
+import { db } from "@/db";
+import { eq } from "drizzle-orm";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -19,34 +21,51 @@ export async function generateMetadata(
   const { slug } = await params;
 
   // fetch Blog
-  const blog = fetchBlog(slug);
-  if (!blog) notFound();
+  const post = await fetchBlog(slug);
 
   // optionally access and extend (rather than replace) parent metadata
   const previousImages = (await parent).openGraph?.images || [];
   const previousKeywords = (await parent).keywords || [];
 
   return {
-    title: blog.title,
+    title: post.title + " | CareerCraft",
+    description: post.excerpt,
     openGraph: {
-      images: blog.image ? [blog.image, ...previousImages] : previousImages,
+      images: post.image ? [post.image, ...previousImages] : previousImages,
     },
-    keywords: [blog.category, ...previousKeywords],
+    keywords: [post.category, ...previousKeywords],
   };
 }
 
-const fetchBlog = (slug: string) => blogPosts.find((b) => b.slug === slug);
+const fetchBlog = async (slug: string) => {
+  "use cache";
+  try {
+    const [post] = await db
+      .select()
+      .from(blog)
+      .where(eq(blog.slug, slug))
+      .innerJoin(users, eq(blog.authorId, users.id));
+    if (!post) notFound();
+
+    return {
+      ...post.blog,
+      author: {
+        name: post.user.name,
+        image: post.user.image,
+        email: post.user.email,
+      },
+    };
+  } catch (error) {
+    notFound();
+  }
+};
 
 export default async function BlogArticlePage({ params }: Props) {
   const { slug } = await params;
-  const post = fetchBlog(slug);
-
-  if (!post) {
-    notFound();
-  }
+  const post: BlogPost = await fetchBlog(slug);
 
   return (
-    <div className="wrapper max-w-5xl flex-1 py-12 md:py-16">
+    <section className="wrapper max-w-5xl flex-1 py-12 md:py-16">
       {/* Back Button */}
       <Link
         href="/blog"
@@ -74,19 +93,35 @@ export default async function BlogArticlePage({ params }: Props) {
         <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
           {/* Author */}
           <div className="flex items-center gap-3">
-            <span className="text-primary font-display flex size-10 items-center justify-center rounded-full border border-zinc-300 bg-zinc-200 text-sm font-bold uppercase">
-              {post.author.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
+            <span className="text-primary font-display relative flex size-10 items-center justify-center overflow-clip rounded-full border border-zinc-300 bg-zinc-200 text-sm font-bold uppercase">
+              {post.author.image ? (
+                <Image
+                  alt={post.author.name || "Author"}
+                  src={post.author.image}
+                  fill
+                  sizes="100%"
+                  className="object-cover object-center"
+                />
+              ) : post.author.name ? (
+                post.author.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+              ) : (
+                <UserRound className="size-5.5" />
+              )}
             </span>
-            <div className="">
-              <span className="text-primary block text-sm font-bold uppercase">
-                {post.author.name}
-              </span>
-              <span className="block text-xs font-semibold text-zinc-500">
-                {post.author.role}
-              </span>
+            <div>
+              {post.author.name && (
+                <span className="text-primary block text-sm font-bold capitalize">
+                  {post.author.name}
+                </span>
+              )}
+              {post.author.email && (
+                <span className="block text-xs font-semibold text-zinc-500">
+                  {post.author.email}
+                </span>
+              )}
             </div>
           </div>
 
@@ -106,7 +141,7 @@ export default async function BlogArticlePage({ params }: Props) {
 
       {/* Main content client wrapper */}
       {post.image && (
-        <div className="rounded-card relative mb-6 aspect-video overflow-clip border-zinc-200 bg-zinc-50 shadow-xl">
+        <main className="rounded-card relative mb-6 aspect-video overflow-clip border-zinc-200 bg-zinc-50 shadow-xl">
           <Image
             alt={post.title}
             src={post.image}
@@ -115,10 +150,10 @@ export default async function BlogArticlePage({ params }: Props) {
             className="object-cover object-center"
             loading="eager"
           />
-        </div>
+        </main>
       )}
 
       <BlogContent post={post} />
-    </div>
+    </section>
   );
 }

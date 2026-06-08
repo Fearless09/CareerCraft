@@ -6,12 +6,13 @@ import {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
+  useRef,
 } from "react";
 import { useSession } from "next-auth/react";
 import { UserProgress } from "../types/resume";
 import { getStorageItem, setStorageItem } from "../lib/localStorage";
 import { apiRequest } from "@/lib/utils";
-import { es } from "zod/locales";
 import useSWR from "swr";
 
 interface ProgressContextType {
@@ -38,6 +39,7 @@ const ProgressContext = createContext<ProgressContextType | undefined>(
 );
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
     data: res,
     error,
@@ -129,100 +131,119 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     hydrate();
   }, [status, isLoading]);
 
-  // 2. Debounced sync to database (if authenticated) and local safety net (always)
-  useEffect(() => {
-    if (!isHydrated) return;
+  // 2. Debounced sync to database (if authenticated) and local safety
+  const syncProgress = useCallback(
+    (progress: UserProgress) => {
+      if (!isHydrated) return;
 
-    const handler = setTimeout(async () => {
-      // Always store locally as fallback
-      setStorageItem(STORAGE_KEY, progress);
+      // Cancel the previous pending call ✅
+      if (debounceRef.current) clearTimeout(debounceRef.current);
 
-      if (status === "authenticated") {
-        try {
-          mutate({ progress: progress }, { revalidate: false });
-          await apiRequest<{ success: boolean }>("/api/progress", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ progressData: progress }),
-          });
-        } catch (error) {
-          console.error(
-            "Failed to automatically synchronize progress with DB:",
-            error,
-          );
+      debounceRef.current = setTimeout(async () => {
+        const updatedProgress = {
+          ...progress,
+          lastVisited: new Date().toISOString(),
+        };
+        setStorageItem(STORAGE_KEY, updatedProgress);
+
+        if (status === "authenticated") {
+          try {
+            mutate({ progress: updatedProgress }, { revalidate: false });
+            await apiRequest<{ success: boolean }>("/api/progress", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ progressData: updatedProgress }),
+            });
+          } catch (error) {
+            console.error("Failed to sync progress:", error);
+          }
         }
-      }
-    }, 1000); // 1000ms debounce to prevent database query overhead
-
-    return () => clearTimeout(handler);
-  }, [progress, isHydrated, status]);
+      }, 1000);
+    },
+    [isHydrated, status, progress],
+  );
 
   const markSectionComplete = (sectionId: string) => {
-    setProgress((prev) => {
-      if (prev.resumeCompletedSections.includes(sectionId)) return prev;
-      return {
-        ...prev,
-        resumeCompletedSections: [...prev.resumeCompletedSections, sectionId],
-      };
-    });
+    if (progress.resumeCompletedSections.includes(sectionId)) return;
+
+    const updated = {
+      ...progress,
+      resumeCompletedSections: [...progress.resumeCompletedSections, sectionId],
+    };
+    setProgress(updated);
+    syncProgress(updated);
   };
 
   const markQuestionAnswered = (questionId: string) => {
-    setProgress((prev) => {
-      if (prev.practiceQuestionsAnswered.includes(questionId)) return prev;
-      return {
-        ...prev,
-        practiceQuestionsAnswered: [
-          ...prev.practiceQuestionsAnswered,
-          questionId,
-        ],
-      };
-    });
+    if (progress.practiceQuestionsAnswered.includes(questionId)) return;
+
+    const newProgress = {
+      ...progress,
+      practiceQuestionsAnswered: [
+        ...progress.practiceQuestionsAnswered,
+        questionId,
+      ],
+    };
+    setProgress(newProgress);
+    syncProgress(newProgress);
   };
 
   const toggleBookmark = (questionId: string) => {
-    setProgress((prev) => {
-      const isBookmarked = prev.bookmarkedQuestions.includes(questionId);
-      const updated = isBookmarked
-        ? prev.bookmarkedQuestions.filter((id) => id !== questionId)
-        : [...prev.bookmarkedQuestions, questionId];
-      return {
-        ...prev,
-        bookmarkedQuestions: updated,
-      };
-    });
+    const isBookmarked = progress.bookmarkedQuestions.includes(questionId);
+    const updated = {
+      ...progress,
+      bookmarkedQuestions: isBookmarked
+        ? progress.bookmarkedQuestions.filter((id) => id !== questionId)
+        : [...progress.bookmarkedQuestions, questionId],
+    };
+
+    setProgress(updated);
+    syncProgress(updated);
   };
 
   const markArticleRead = (slug: string) => {
-    setProgress((prev) => {
-      if (prev.blogArticlesRead.includes(slug)) return prev;
-      return {
-        ...prev,
-        blogArticlesRead: [...prev.blogArticlesRead, slug],
-      };
-    });
+    if (progress.blogArticlesRead.includes(slug)) return;
+
+    const newProgress = {
+      ...progress,
+      blogArticlesRead: [...progress.blogArticlesRead, slug],
+    };
+    setProgress(newProgress);
+    syncProgress(newProgress);
   };
 
-  const resetPracticeProgress = (categoryQuestionIds?: string[]) => {
-    setProgress((prev) => {
-      if (categoryQuestionIds) {
-        // Reset only specified questions
-        return {
-          ...prev,
-          practiceQuestionsAnswered: prev.practiceQuestionsAnswered.filter(
-            (id) => !categoryQuestionIds.includes(id),
-          ),
-          bookmarkedQuestions: prev.bookmarkedQuestions.filter(
-            (id) => !categoryQuestionIds.includes(id),
-          ),
-        };
-      }
-      return {
-        ...prev,
+  const resetPracticeProgress = async (categoryQuestionIds?: string[]) => {
+    if (!categoryQuestionIds) {
+      const newProgress = {
+        ...progress,
         practiceQuestionsAnswered: [],
         bookmarkedQuestions: [],
       };
-    });
+      setProgress(newProgress);
+      syncProgress(newProgress);
+      return;
+    }
+
+    if (
+      categoryQuestionIds.length === 0 &&
+      progress.bookmarkedQuestions.length === 0 &&
+      progress.practiceQuestionsAnswered.length === 0
+    ) {
+      return;
+    }
+
+    const newProgress = {
+      ...progress,
+      practiceQuestionsAnswered: progress.practiceQuestionsAnswered.filter(
+        (id) => !categoryQuestionIds.includes(id),
+      ),
+      bookmarkedQuestions: progress.bookmarkedQuestions.filter(
+        (id) => !categoryQuestionIds.includes(id),
+      ),
+    };
+
+    setProgress(newProgress);
+    syncProgress(newProgress);
   };
 
   return (

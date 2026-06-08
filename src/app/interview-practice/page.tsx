@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { practiceQuestions } from "../../data/practiceQuestions";
+import { useMemo, useState } from "react";
 import { useProgress } from "../../context/ProgressContext";
 import { useUI } from "../../context/UIContext";
 import {
@@ -13,15 +12,22 @@ import {
   AlertCircle,
   HelpCircle,
 } from "lucide-react";
-import { cn } from "../../lib/utils";
-
-const categories = [
-  "All",
-  ...new Set(practiceQuestions.map((q) => q.category)),
-  "Bookmarked",
-];
+import { apiRequest, cn } from "../../lib/utils";
+import useSWR from "swr";
+import { PracticeQuestion } from "@/db/schema";
+import { Loader } from "@/components/shared/Loader";
 
 export default function InterviewPracticePage() {
+  const { data, isLoading } = useSWR<{
+    practiceQuestions: PracticeQuestion[];
+  }>("/api/practice", apiRequest);
+  const practiceQuestions = data?.practiceQuestions || [];
+  const categories: ("All" | PracticeQuestion["category"] | "Bookmarked")[] = [
+    "All",
+    ...new Set(practiceQuestions.map((q) => q.category)),
+    "Bookmarked",
+  ];
+
   const {
     progress,
     markQuestionAnswered,
@@ -29,7 +35,9 @@ export default function InterviewPracticePage() {
     resetPracticeProgress,
   } = useProgress();
   const { addToast } = useUI();
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [selectedCategory, setSelectedCategory] = useState<
+    "All" | PracticeQuestion["category"] | "Bookmarked"
+  >("All");
   const [revealedAnswers, setRevealedAnswers] = useState<
     Record<string, boolean>
   >({});
@@ -73,26 +81,32 @@ export default function InterviewPracticePage() {
   };
 
   // Progress Calculation
-  const totalCount =
-    selectedCategory === "Bookmarked"
-      ? progress.bookmarkedQuestions.length
-      : selectedCategory === "All"
-        ? practiceQuestions.length
-        : practiceQuestions.filter((q) => q.category === selectedCategory)
-            .length;
+  const totalCount: number = useMemo(() => {
+    if (selectedCategory === "Bookmarked") {
+      return progress.bookmarkedQuestions.length;
+    } else if (selectedCategory === "All") {
+      return practiceQuestions.length;
+    } else {
+      return practiceQuestions.filter((q) => q.category === selectedCategory)
+        .length;
+    }
+  }, [selectedCategory, progress, practiceQuestions]);
 
-  const answeredInScope =
-    selectedCategory === "Bookmarked"
-      ? progress.bookmarkedQuestions.filter((id) =>
-          progress.practiceQuestionsAnswered.includes(id),
-        ).length
-      : selectedCategory === "All"
-        ? progress.practiceQuestionsAnswered.length
-        : practiceQuestions.filter(
-            (q) =>
-              q.category === selectedCategory &&
-              progress.practiceQuestionsAnswered.includes(q.id),
-          ).length;
+  const answeredInScope: number = useMemo(() => {
+    if (selectedCategory === "Bookmarked") {
+      return progress.bookmarkedQuestions.filter((id) =>
+        progress.practiceQuestionsAnswered.includes(id),
+      ).length;
+    } else if (selectedCategory === "All") {
+      return progress.practiceQuestionsAnswered.length;
+    } else {
+      return practiceQuestions.filter(
+        (q) =>
+          q.category === selectedCategory &&
+          progress.practiceQuestionsAnswered.includes(q.id),
+      ).length;
+    }
+  }, [selectedCategory, progress, practiceQuestions]);
 
   const progressPercent =
     totalCount > 0 ? (answeredInScope / totalCount) * 100 : 0;
@@ -172,13 +186,20 @@ export default function InterviewPracticePage() {
             },
           )}
         >
-          <RotateCcw className="h-3.5 w-3.5" />
+          <RotateCcw className="size-3.5" />
           Reset progress
         </button>
       </main>
 
       {/* Questions Stack */}
-      {filteredQuestions.length === 0 ? (
+      {isLoading ? (
+        <div className="flex h-64 flex-col items-center justify-center gap-3">
+          <Loader length={12} />
+          <span className="text-xs font-medium text-zinc-500">
+            Loading questions...
+          </span>
+        </div>
+      ) : filteredQuestions.length === 0 ? (
         <main
           id="no-questions-found"
           className="mx-auto max-w-md rounded-2xl border border-zinc-200 bg-white px-5 py-16 text-center shadow"

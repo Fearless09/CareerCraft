@@ -19,7 +19,7 @@ import {
   PersonalInfo,
 } from "../types/resume";
 import { getStorageItem, setStorageItem } from "../lib/localStorage";
-import { sampleResume } from "@/data/sampleResume";
+import { emptyResume, sampleResume } from "@/data/sampleResume";
 import { apiRequest } from "@/lib/utils";
 import useSWR from "swr";
 
@@ -57,35 +57,6 @@ interface ResumeContextType {
 
 const STORAGE_KEY = "cc_resume_data";
 const STEP_STORAGE_KEY = "cc_last_step";
-
-const emptyResume: ResumeData = {
-  personalInfo: {
-    fullName: "",
-    jobTitle: "",
-    email: "",
-    phone: "",
-    location: "",
-    linkedIn: "",
-    website: "",
-    photoUrl: "",
-  },
-  summary: "",
-  experience: [],
-  education: [],
-  skills: {
-    technical: [],
-    soft: [],
-    languages: [],
-  },
-  projects: [],
-  certifications: [],
-  additionalSections: [],
-  meta: {
-    templateId: "classic",
-    accentColor: "#1e3a8a", // Default dark navy
-    lastUpdated: new Date().toISOString(),
-  },
-};
 
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 

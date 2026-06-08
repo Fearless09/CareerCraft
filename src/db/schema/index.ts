@@ -4,8 +4,6 @@ import {
   text,
   primaryKey,
   integer,
-  uuid,
-  jsonb,
 } from "drizzle-orm/pg-core";
 
 /* 
@@ -28,7 +26,7 @@ export const users = pgTable("user", {
   image: text("image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
-export type InsertUser = typeof users.$inferInsert;
+export type InsertUser = Omit<typeof users.$inferInsert, "id" | "createdAt">;
 export type SelectUser = typeof users.$inferSelect;
 
 /* 
@@ -110,41 +108,10 @@ export const verificationTokens = pgTable(
   ],
 );
 
-/* 
-=============================================================================
-   5. RESUME STORAGE TABLE (`resume`)
-   -------------------------------------------------------------------------
-   PURPOSE: 
-   Stores the user's resume data in the cloud. This table supports saving 
-   multiple resumes per user account.
-=============================================================================
-*/
-export const resumes = pgTable("resume", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull().default("Untitled Resume"),
-  data: jsonb("data").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const admins = pgTable("admin", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text("userId")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const userProgress = pgTable("user_progress", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => users.id, { onDelete: "cascade" }),
-  data: jsonb("data").notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-export type UserProgressSelect = typeof userProgress.$inferSelect;
+export * from "./admin";
+export * from "./resume";
+export * from "./blog";
+export { type GuideInsert, type Guide, guide } from "./guide";
+export * from "./practiceQuestion";
+export * from "./tip";
+export * from "./userProgress";

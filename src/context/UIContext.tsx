@@ -49,7 +49,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
       const id = Math.random().toString(36).substring(2, 9);
       setToasts((prev) => [...prev, { id, message, type }]);
 
-      // Auto-dismiss after 4 seconds
+      // Auto-dismiss after 5seconds
       setTimeout(() => {
         dismissToast(id);
       }, timeOut);

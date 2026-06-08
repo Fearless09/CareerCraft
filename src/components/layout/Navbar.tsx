@@ -15,10 +15,16 @@ import {
   Sparkles,
   LogOut,
   User,
+  UserRoundCog,
+  UserStar,
+  Copy,
+  CopyCheck,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import Image from "next/image";
 import { GoogleSvg } from "../shared/Svgs";
+import { User as SessionUser } from "next-auth";
+import useCopy from "@/hooks/useCopy";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -85,10 +91,8 @@ export default function Navbar() {
   return (
     <nav
       className={cn(
-        "transition-300 text-primary fixed inset-x-0 top-0 z-50 bg-white py-5 backdrop-blur-md",
-        {
-          "py-3 shadow-lg": scrolled,
-        },
+        "transition-300 text-primary fixed inset-x-0 top-0 z-50 bg-white py-5",
+        { "py-3 shadow-lg": scrolled },
       )}
     >
       <section className="wrapper flex items-center justify-between gap-2 px-5">
@@ -125,77 +129,49 @@ export default function Navbar() {
 
         {/* Desktop Actions (Auth) */}
         <div className="flex items-center gap-2">
-          {status === "loading" ? (
-            <span className="border-primary block size-6 animate-spin rounded-full border-3 border-t-zinc-200" />
-          ) : session ? (
-            <div className="relative" ref={profileRef}>
-              <button
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="transition-300 border-primary/10 hover:border-accent flex cursor-pointer items-center justify-center rounded-full border-2 focus:outline-none active:scale-95"
-              >
-                {session.user?.image ? (
-                  <Image
-                    src={session.user.image}
-                    alt={session.user.name || "User profile"}
-                    width={32}
-                    height={32}
-                    className="size-8 rounded-full object-cover object-center"
-                  />
-                ) : (
-                  <span className="bg-primary flex size-8 items-center justify-center rounded-full text-sm font-semibold text-white">
-                    {session.user?.name ? (
-                      session.user.name[0].toUpperCase()
-                    ) : (
-                      <User className="size-4" />
-                    )}
-                  </span>
-                )}
-              </button>
-
-              <main
-                className={cn(
-                  "transition-300 absolute right-0 z-50 mt-2.5 w-60 origin-top-right rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl backdrop-blur-md",
-                  { "pointer-events-none scale-0": !isProfileOpen },
-                )}
-              >
-                <div className="mb-1.5 border-b border-zinc-100 px-3 pt-2 pb-3">
-                  <p className="truncate text-sm font-semibold text-zinc-900">
-                    {session.user?.name || "CareerCraft User"}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-zinc-500">
-                    {session.user?.email}
-                  </p>
-                </div>
-
-                <Link
-                  href="/generator"
-                  onClick={() => setIsProfileOpen(false)}
-                  className="transition-300 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900"
-                >
-                  <FileText className="size-4 text-zinc-400" />
-                  My Resumes
-                </Link>
+          <>
+            {status === "loading" ? (
+              <span className="border-primary block size-6 animate-spin rounded-full border-3 border-t-zinc-200" />
+            ) : session ? (
+              <div className="relative" ref={profileRef}>
                 <button
-                  onClick={() => {
-                    setIsProfileOpen(false);
-                    signOut();
-                  }}
-                  className="transition-300 flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-zinc-700 hover:bg-red-50 hover:text-red-700"
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className={cn(
+                    "transition-300 border-primary/10 hover:border-accent bg-primary relative flex size-8.5 cursor-pointer items-center justify-center overflow-clip rounded-full border-2 text-sm font-semibold text-white focus:outline-none active:scale-95",
+                    { "bg-transparent": session.user.image },
+                  )}
                 >
-                  <LogOut className="size-4" />
-                  Sign Out
+                  {session.user?.image ? (
+                    <Image
+                      src={session.user.image}
+                      alt={session.user.name || "User profile"}
+                      fill
+                      sizes="100%"
+                      className="object-cover object-center"
+                    />
+                  ) : session.user?.name ? (
+                    session.user.name[0].toUpperCase()
+                  ) : (
+                    <User className="size-4" />
+                  )}
                 </button>
-              </main>
-            </div>
-          ) : (
-            <button
-              onClick={() => signIn("google")}
-              className="transition-300 hover:text-primary flex cursor-pointer items-center gap-2 rounded-full border border-zinc-100 bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm hover:border-zinc-200 hover:bg-zinc-300 active:scale-95"
-            >
-              <GoogleSvg className="size-4" />
-              Sign In
-            </button>
-          )}
+
+                <UserProfile
+                  open={isProfileOpen}
+                  onClose={() => setIsProfileOpen(false)}
+                  user={session.user as SessionUser}
+                />
+              </div>
+            ) : (
+              <button
+                onClick={() => signIn("google")}
+                className="transition-300 hover:text-primary flex cursor-pointer items-center gap-2 rounded-full border border-zinc-100 bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm hover:border-zinc-200 hover:bg-zinc-300 active:scale-95"
+              >
+                <GoogleSvg className="size-4" />
+                Sign In
+              </button>
+            )}
+          </>
 
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -251,3 +227,76 @@ const navItems = [
   { name: "Q&A Practice", href: "/interview-practice", icon: CheckSquare },
   { name: "Blog", href: "/blog", icon: MessageSquare },
 ];
+
+const UserProfile = ({
+  onClose,
+  open,
+  user,
+}: {
+  user: SessionUser;
+  open: boolean;
+  onClose: () => void;
+}) => {
+  const { copied, copy } = useCopy();
+  return (
+    <main
+      className={cn(
+        "transition-300 absolute right-0 z-50 mt-2.5 w-60 origin-top-right rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl backdrop-blur-md",
+        { "pointer-events-none scale-0": !open },
+      )}
+    >
+      <div className="mb-1.5 border-b border-zinc-100 px-3 pt-2 pb-3">
+        <p className="truncate text-sm font-semibold text-zinc-900">
+          {user?.name || "CareerCraft User"}
+        </p>
+        {user?.email && (
+          <p
+            className={cn(
+              "transition-300 mt-0.5 flex cursor-pointer items-center justify-between gap-1 truncate text-left text-xs text-zinc-500 underline-offset-2 hover:underline [&_svg]:size-3.5",
+              {
+                "text-green-600": copied,
+              },
+            )}
+            onClick={() => copy(user?.email as string)}
+          >
+            {user?.email}
+            {copied ? <CopyCheck /> : <Copy />}
+          </p>
+        )}
+      </div>
+
+      {user?.isAdmin && (
+        <Link
+          href="/admin"
+          onClick={() => onClose()}
+          className="transition-300 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900 [&>svg]:size-4.5"
+        >
+          {user.isSuperAdmin ? (
+            <UserStar className="text-accent" />
+          ) : (
+            <UserRoundCog className="text-zinc-400" />
+          )}
+          Admin
+        </Link>
+      )}
+      <Link
+        href="/generator"
+        onClick={() => onClose()}
+        className="transition-300 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900"
+      >
+        <FileText className="size-4 text-zinc-400" />
+        My Resumes
+      </Link>
+      <button
+        onClick={() => {
+          onClose();
+          signOut();
+        }}
+        className="transition-300 flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-zinc-700 hover:bg-red-50 hover:text-red-700"
+      >
+        <LogOut className="size-4" />
+        Sign Out
+      </button>
+    </main>
+  );
+};

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { resumeTips, interviewTips } from "@/data/tips";
 import {
   CheckCircle,
   AlertCircle,
@@ -9,27 +8,35 @@ import {
   HelpCircle,
   Sparkles,
   Filter,
+  Loader2,
 } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { apiRequest, cn } from "../../lib/utils";
+import useSWR from "swr";
+import { Tip } from "@/db/schema";
 
 export default function TipsPage() {
-  const [activeTab, setActiveTab] = useState<"resume" | "interview">("resume");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const { data, isLoading } = useSWR<{ tips: Tip[] }>("/api/tips", apiRequest);
 
-  const currentTipsList = activeTab === "resume" ? resumeTips : interviewTips;
+  const [activeTab, setActiveTab] = useState<Tip["resourceType"]>("Resume");
+  const [selectedCategory, setSelectedCategory] = useState<
+    "All" | Tip["category"]
+  >("All");
+
+  const currentTipsList =
+    data?.tips?.filter((t) => t.resourceType === activeTab) ?? [];
 
   const filteredTips = currentTipsList.filter((tip) => {
     if (selectedCategory === "All") return true;
     return tip.category === selectedCategory;
   });
 
-  const handleTabChange = (tab: "resume" | "interview") => {
+  const handleTabChange = (tab: Tip["resourceType"]) => {
     setActiveTab(tab);
     setSelectedCategory("All"); // Reset filters
   };
 
   // Extract unique categories for current tab
-  const categories = [
+  const categories: ("All" | Tip["category"])[] = [
     "All",
     ...new Set(currentTipsList.map((t) => t.category)),
   ];
@@ -112,78 +119,107 @@ export default function TipsPage() {
         ))}
       </section>
 
-      {/* Tips Grid */}
-      <section
-        id="tips"
-        className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8"
-      >
-        {filteredTips.map((tip) => {
-          const isDo = tip.type === "do";
-          return (
-            <div
-              key={tip.id}
-              className={cn(
-                "group relative flex flex-col overflow-hidden rounded-2xl border border-rose-100/70 bg-white p-6 shadow-sm transition-all duration-200 hover:border-rose-200 hover:shadow-md sm:p-8",
-                { "border-emerald-100/70 hover:border-emerald-200": isDo },
-              )}
-            >
-              {/* Context Tag indicator */}
-              <div
-                className={cn(
-                  "transition-300 absolute top-0.5 left-1/2 h-1 w-25 -translate-x-1/2 rounded-full bg-rose-500 group-hover:top-0 group-hover:w-full",
-                  { "bg-emerald-500": isDo },
-                )}
-              />
-
-              <div className="mb-5 flex items-stretch gap-2.5">
-                <span
-                  className={cn(
-                    "w-fit shrink-0 rounded-lg border border-rose-100 bg-rose-50 p-1.5 text-rose-600 [&_svg]:size-5",
-                    {
-                      "border-emerald-100 bg-emerald-50 text-emerald-600": isDo,
-                    },
-                  )}
-                >
-                  {isDo ? <CheckCircle /> : <AlertCircle />}
-                </span>
-                <span className="flex items-center rounded-md border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-[10px] font-extrabold tracking-wider text-zinc-700 uppercase">
-                  {tip.category}
-                </span>
-              </div>
-
-              <h2 className="font-display text-primary mb-3 text-lg font-bold">
-                {tip.headline}
-              </h2>
-
-              <p className="mb-5 flex-1 text-sm leading-relaxed text-zinc-500">
-                {tip.explanation}
-              </p>
-
-              {!!tip.example && (
+      {/* Tips */}
+      <>
+        {isLoading ? (
+          <div className="flex h-64 flex-col items-center justify-center gap-3">
+            <Loader2 className="text-accent size-10 animate-spin" />
+            <span className="text-xs font-medium text-zinc-500">
+              Loading Cheat Sheets...
+            </span>
+          </div>
+        ) : filteredTips.length === 0 ? (
+          <div className="mx-auto flex h-64 max-w-2xl flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-8 text-center">
+            <Sparkles className="text-accent mb-3 size-10" />
+            <h3 className="text-sm font-bold text-zinc-800">
+              No cheat sheets found
+            </h3>
+            <p className="mt-1.5 max-w-xs text-xs text-zinc-400">
+              Try adjusting your category filter, or check your internet
+              connection and refresh the page.
+            </p>
+          </div>
+        ) : (
+          <section
+            id="tips"
+            className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8"
+          >
+            {filteredTips.map((tip) => {
+              const isDo = tip.type === "do";
+              return (
                 <div
+                  key={tip.id}
                   className={cn(
-                    "font-body rounded-xl border border-rose-100 bg-rose-50/50 p-4 text-xs leading-relaxed text-rose-800",
-                    {
-                      "border-emerald-100 bg-emerald-50/50 text-emerald-800":
-                        isDo,
-                    },
+                    "group relative flex flex-col overflow-hidden rounded-2xl border border-rose-100/70 bg-white p-6 shadow-sm transition-all duration-200 hover:border-rose-200 hover:shadow-md sm:p-8",
+                    { "border-emerald-100/70 hover:border-emerald-200": isDo },
                   )}
                 >
-                  <span className="mb-1 block font-bold uppercase">
-                    Example:
-                  </span>
-                  <span className="italic">{tip.example}</span>
+                  {/* Context Tag indicator */}
+                  <span
+                    className={cn(
+                      "transition-300 absolute top-0.5 left-1/2 h-1 w-25 -translate-x-1/2 rounded-full bg-rose-500 group-hover:top-0 group-hover:w-full",
+                      { "bg-emerald-500": isDo },
+                    )}
+                  />
+
+                  <div className="mb-5 flex items-stretch gap-2.5">
+                    <span
+                      className={cn(
+                        "w-fit shrink-0 rounded-lg border border-rose-100 bg-rose-50 p-1.5 text-rose-600 [&_svg]:size-5",
+                        {
+                          "border-emerald-100 bg-emerald-50 text-emerald-600":
+                            isDo,
+                        },
+                      )}
+                    >
+                      {isDo ? <CheckCircle /> : <AlertCircle />}
+                    </span>
+                    <span className="flex items-center rounded-md border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-[10px] font-extrabold tracking-wider text-zinc-700 uppercase">
+                      {tip.category}
+                    </span>
+                  </div>
+
+                  <h2 className="font-display text-primary mb-3 text-lg font-bold">
+                    {tip.headline}
+                  </h2>
+
+                  <p className="mb-5 flex-1 text-sm leading-relaxed text-zinc-500">
+                    {tip.explanation}
+                  </p>
+
+                  {!!tip.example && (
+                    <div
+                      className={cn(
+                        "font-body rounded-xl border border-rose-100 bg-rose-50/50 p-4 text-xs leading-relaxed text-rose-800",
+                        {
+                          "border-emerald-100 bg-emerald-50/50 text-emerald-800":
+                            isDo,
+                        },
+                      )}
+                    >
+                      <span className="mb-1 block font-bold uppercase">
+                        Example:
+                      </span>
+                      <span className="italic">{tip.example}</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </section>
+              );
+            })}
+          </section>
+        )}
+      </>
     </section>
   );
 }
 
-const tabs = [
-  { id: "resume" as const, icon: FileText, name: "Resume Guidelines" },
-  { id: "interview" as const, icon: HelpCircle, name: "Interview Cheat Sheet" },
+interface TAB {
+  id: Tip["resourceType"];
+  name: string;
+  icon: React.FC<React.ComponentProps<"svg">>;
+}
+
+const tabs: TAB[] = [
+  { id: "Resume", icon: FileText, name: "Resume Guidelines" },
+  { id: "Interview", icon: HelpCircle, name: "Interview Cheat Sheet" },
 ];

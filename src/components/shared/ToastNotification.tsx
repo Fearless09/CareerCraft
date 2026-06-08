@@ -10,7 +10,10 @@ export default function ToastNotification() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed right-6 bottom-6 z-9999 flex w-full max-w-sm flex-col gap-3">
+    <main
+      className="pointer-events-none fixed right-6 bottom-6 z-9999 flex w-full max-w-sm flex-col gap-3"
+      aria-label="toast nofitication"
+    >
       {toasts.map((toast) => {
         const Icon = {
           success: CheckCircle,
@@ -41,13 +44,13 @@ export default function ToastNotification() {
                 "text-blue-600": toast.type === "info",
               })}
             />
-            <div className="flex-1 text-sm leading-relaxed font-medium">
+            <h6 className="flex-1 text-sm leading-relaxed font-medium">
               {toast.message}
-            </div>
+            </h6>
             <button
               onClick={() => dismissToast(toast.id)}
               className={cn(
-                "transition-300 rounded-lg p-0.5 hover:bg-black/5",
+                "transition-300 shrink-0 rounded-lg p-0.5 hover:bg-black/5",
                 {
                   "text-emerald-700": toast.type === "success",
                   "text-rose-700": toast.type === "error",
@@ -61,6 +64,6 @@ export default function ToastNotification() {
           </div>
         );
       })}
-    </div>
+    </main>
   );
 }

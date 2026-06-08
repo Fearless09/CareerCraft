@@ -9,7 +9,7 @@ import { UserProgress } from "@/types/resume";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as User).id;
+  const userId = (session?.user as User)?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

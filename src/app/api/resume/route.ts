@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { db } from "@/db";
-import { resumes } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { User } from "next-auth";
 import { ResumeData } from "@/types/resume";
+import { resume } from "@/db/schema/resume";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -15,8 +15,8 @@ export async function GET() {
   }
 
   try {
-    const userResume = await db.query.resumes.findFirst({
-      where: eq(resumes.userId, userId),
+    const userResume = await db.query.resume.findFirst({
+      where: eq(resume.userId, userId),
     });
 
     return NextResponse.json({ resume: userResume?.data || null });
@@ -46,17 +46,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const existing = await db.query.resumes.findFirst({
-      where: eq(resumes.userId, userId),
+    const existing = await db.query.resume.findFirst({
+      where: eq(resume.userId, userId),
     });
 
     if (existing) {
       await db
-        .update(resumes)
+        .update(resume)
         .set({ data: userResumeData, updatedAt: new Date() })
-        .where(eq(resumes.id, existing.id));
+        .where(eq(resume.id, existing.id));
     } else {
-      await db.insert(resumes).values({
+      await db.insert(resume).values({
         userId: userId,
         title: "Active Resume",
         data: userResumeData,

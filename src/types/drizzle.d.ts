@@ -16,3 +16,4 @@ declare module "@next/env" {
     loadedEnvFiles: Array<{ path: string; contents: string }>;
   };
 }
+

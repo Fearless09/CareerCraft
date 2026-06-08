@@ -2,8 +2,7 @@
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
-import { blogPosts, getPostCatColor } from "../../data/blog";
-import { useProgress } from "../../context/ProgressContext";
+import { useProgress } from "@/context/ProgressContext";
 import {
   Search,
   Calendar,
@@ -13,13 +12,22 @@ import {
   Tag,
   Eye,
   ImageIcon,
+  UserRound,
 } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { apiRequest, cn, getPostCatColor } from "@/lib/utils";
 import Image from "next/image";
-
-const categories = ["All", ...new Set(blogPosts.map((b) => b.category))];
+import useSWR from "swr";
+import { BlogPost } from "@/db/schema";
+import { Loader } from "@/components/shared/Loader";
 
 export default function BlogListingPage() {
+  const { data, isLoading } = useSWR<{ posts: BlogPost[] }>(
+    "/api/blogs",
+    apiRequest,
+  );
+  const blogPosts = data?.posts || [];
+  const categories = ["All", ...new Set(blogPosts.map((b) => b.category))];
+
   const { progress } = useProgress();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
@@ -95,7 +103,15 @@ export default function BlogListingPage() {
       </main>
 
       {/* Blog Cards Grid */}
-      {filteredPosts.length === 0 ? (
+      {isLoading ? (
+        <div className="flex h-50 flex-col items-center justify-center gap-3">
+          {/* <Loader2 className="text-accent size-10 animate-spin" /> */}
+          <Loader length={10} />
+          <span className="text-xs font-medium text-zinc-500">
+            Loading articles...
+          </span>
+        </div>
+      ) : filteredPosts.length === 0 ? (
         <main
           id="no-post-found"
           className="mx-auto max-w-md rounded-2xl border border-zinc-200 bg-white px-5 py-16 text-center shadow"
@@ -179,25 +195,43 @@ export default function BlogListingPage() {
                   </p>
 
                   {/* Footer details */}
-                  <div className="flex items-center justify-between border-t border-zinc-100 pt-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-4">
+                    {/* Author details */}
                     <div className="flex items-center gap-2">
                       <span className="text-primary font-display flex size-8.5 items-center justify-center rounded-full border border-zinc-300 bg-zinc-200 text-xs font-bold uppercase">
-                        {post.author.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
+                        {post.author.name ? (
+                          post.author.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                        ) : post.author.image ? (
+                          <Image
+                            src={post.author.image}
+                            alt={post.author.name || "Author"}
+                            fill
+                            sizes="100%"
+                            className="object-cover object-center"
+                          />
+                        ) : (
+                          <UserRound className="size-4" />
+                        )}
                       </span>
                       <div className="font-semibold">
-                        <span className="text-primary block text-xs font-bold">
-                          {post.author.name}
-                        </span>
-                        <span className="block text-[10px] text-zinc-500">
-                          {post.author.role}
-                        </span>
+                        {post.author.name && (
+                          <span className="text-primary block text-xs font-bold">
+                            {post.author.name}
+                          </span>
+                        )}
+                        {post.author.email && (
+                          <span className="block text-[10px] text-zinc-500">
+                            {post.author.email}
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 text-[10px] font-medium text-zinc-500">
+                    {/* Publish date and read time */}
+                    <div className="flex shrink-0 items-center gap-4 text-[10px] font-medium text-zinc-500">
                       <span className="flex items-center gap-1">
                         <Calendar className="size-3.5" />
                         {post.publishDate}

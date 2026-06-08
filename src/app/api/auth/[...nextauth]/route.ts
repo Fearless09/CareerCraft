@@ -2,10 +2,16 @@ import NextAuth, { AuthOptions, User } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { Database, db } from "@/db";
+import { admin } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export const authOptions: AuthOptions = {
   // Use Drizzle ORM to store users, accounts, sessions, and verification tokens
   adapter: DrizzleAdapter(db.$primary as Database),
+
+  session: {
+    strategy: "jwt",
+  },
 
   providers: [
     GoogleProvider({
@@ -15,10 +21,32 @@ export const authOptions: AuthOptions = {
   ],
 
   callbacks: {
-    // Inject the database user's ID into the session object so the client can access it
-    async session({ session, user }) {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      if (token.id) {
+        try {
+          const adminRecord = await db.query.admin.findFirst({
+            where: eq(admin.userId, token.id as string),
+          });
+          token.isAdmin = !!adminRecord;
+          token.isSuperAdmin = adminRecord?.isSuperAdmin;
+        } catch (err) {
+          token.isAdmin = false;
+          token.isSuperAdmin = false;
+        }
+      } else {
+        token.isAdmin = false;
+        token.isSuperAdmin = false;
+      }
+      return token;
+    },
+    async session({ session, token }) {
       if (session.user) {
-        (session.user as User).id = user.id;
+        session.user.id = token.id as string;
+        session.user.isAdmin = token.isAdmin as boolean;
+        session.user.isSuperAdmin = token.isSuperAdmin as boolean;
       }
       return session;
     },
