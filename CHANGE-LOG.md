@@ -10,15 +10,33 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Planned
 
-- Dark mode toggle (Tailwind dark variant + user preference persisted in localStorage)
-- User authentication via email and OAuth (Phase 2)
-- Cloud resume storage with PostgreSQL via Prisma (Phase 2)
-- Admin CMS for blog posts with markdown support (Phase 2)
+- Dark mode toggle (Tailwind dark variant + user preference persisted in localStorage) (Phase 3)
+- Multiple saved resumes per account (Phase 3)
 - AI-powered professional summary and bullet-point suggestions (Phase 3)
 - Cover letter generator paired with resume data context (Phase 3)
-- ATS score checker with keyword match scoring against job descriptions (Phase 3)
-- Resume public sharing via unique slug (Phase 3)
+- ATS score checker with keyword match scoring against job descriptions (Phase 4)
+- Resume public sharing via unique slug (Phase 4)
 - Mobile application (React Native, Phase 4)
+
+---
+
+## [1.3.0] - 2026-06-09
+
+### Added
+
+- **PostgreSQL & Drizzle ORM Setup**: Configured database access using Drizzle ORM and a `node-postgres` PG connection pool. Added support for primary write database and 2 read replicas using Drizzle's `withReplicas` adapter for read-splitting.
+- **NextAuth Integration**: Implemented NextAuth Google provider login using a JWT strategy and `DrizzleAdapter` for secure session storage. Custom callbacks check admin permissions against the database `admin` table.
+- **Database Synchronization**: Created Next.js API endpoints `/api/resume` and `/api/progress` to fetch and sync resume data and user activity progress.
+- **Client-Side SWR Sync**: Configured client contexts (`ResumeContext` and `ProgressContext`) to sync with server APIs using `useSWR` when authenticated. Updates are debounced by 1 second on write.
+- **Local-to-Cloud Migration**: Added a one-time automated migration logic that transfers local draft resumes and progress logs from `localStorage` to the database on the user's first login.
+- **GitHub Integrated Feedback widget**: Created a persistent floating widget and modal (`FeedbackModal`) that posts validated feedback details (bugs, features, etc.) directly to the GitHub repository issues via `/api/feedback` API route.
+- **Unified Wave Loader**: Replaced inline load indicators with a unified wave loader component (`Loader.tsx`) with animated wave bars.
+- **SEO & Social Sharing Metadata**: Added support for meta keywords, OpenGraph tags, and Twitter cards sharing default preview images.
+
+### Improved
+
+- **Admin Managers Extension**: Expanded `/admin` sub-routes to fully manage guides, tips, blogs (with Vercel Blob uploads and real-time Markdown editor word count), Q&A practice (with custom inputs for STAR method situations), and administrator registries.
+- **Admin Panel Zinc Light Theme**: Completed transition of the entire admin manager portal views (dashboard card status, tables, slide-over modals) to light zinc styles for design consistency.
 
 ---
 

@@ -27,17 +27,34 @@ export const metadata: Metadata = {
   description:
     "Craft professional resumes, review insider resume and interview tips, study step-by-step career guides, drill Q&A questions, and read career articles.",
   applicationName: "CareerCraft",
+  keywords: [
+    "career advice",
+    "resume tips",
+    "interview tips",
+    "career guides",
+    "career articles",
+    "career development",
+    "career growth",
+    "career planning",
+    "career success",
+    "career strategy",
+  ],
   openGraph: {
     type: "website",
     title: "CareerCraft — Your Premium Career Launchpad",
     description:
       "Craft professional resumes, review insider resume and interview tips, study step-by-step career guides, drill Q&A questions, and read career articles.",
+    images:
+      "https://fxttuudo5uhbnspa.public.blob.vercel-storage.com/open%20graph/og.png",
   },
+
   twitter: {
     card: "summary_large_image",
     title: "CareerCraft — Your Premium Career Launchpad",
     description:
       "Craft professional resumes, review insider resume and interview tips, study step-by-step career guides, drill Q&A questions, and read career articles.",
+    images:
+      "https://fxttuudo5uhbnspa.public.blob.vercel-storage.com/open%20graph/og.png",
   },
 };
 
