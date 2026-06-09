@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signIn, signOut } from "next-auth/react";
 import {
   Menu,
   X,
@@ -12,14 +13,43 @@ import {
   BookOpen,
   MessageSquare,
   Sparkles,
+  LogOut,
+  User,
+  UserRoundCog,
+  UserStar,
+  Copy,
+  CopyCheck,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import Image from "next/image";
+import { GoogleSvg } from "../shared/Svgs";
+import { User as SessionUser } from "next-auth";
+import useCopy from "@/hooks/useCopy";
 
 export default function Navbar() {
+  const { data: session, status } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
   const mobileRef = useRef<HTMLElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    if (!isProfileOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(e.target as Node)
+      ) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isProfileOpen]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -61,10 +91,8 @@ export default function Navbar() {
   return (
     <nav
       className={cn(
-        "transition-300 text-primary fixed inset-x-0 top-0 z-50 bg-white py-5 backdrop-blur-md",
-        {
-          "py-3 shadow-lg": scrolled,
-        },
+        "transition-300 text-primary fixed inset-x-0 top-0 z-50 bg-white py-5",
+        { "py-3 shadow-lg": scrolled },
       )}
     >
       <section className="wrapper flex items-center justify-between gap-2 px-5">
@@ -79,13 +107,13 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Nav Items */}
-        <div className="hidden items-center gap-2.5 lg:flex">
+        <div className="hidden items-center gap-2 lg:flex xl:gap-2.5">
           {navItems.map((item) => (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
-                "transition-300 text-zinc-650 flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium hover:bg-zinc-200",
+                "transition-300 text-zinc-650 flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium hover:bg-zinc-200 xl:px-4",
                 {
                   "bg-primary hover:bg-primary/90 text-white shadow-md":
                     pathname === item.href ||
@@ -93,17 +121,61 @@ export default function Navbar() {
                 },
               )}
             >
-              <item.icon className="size-4" />
+              <item.icon className="hidden size-4 xl:inline" />
               {item.name}
             </Link>
           ))}
         </div>
 
-        {/* Mobile Menu Button */}
-        <div className="lg:hidden">
+        {/* Desktop Actions (Auth) */}
+        <div className="flex items-center gap-2">
+          <>
+            {status === "loading" ? (
+              <span className="border-primary block size-6 animate-spin rounded-full border-3 border-t-zinc-200" />
+            ) : session ? (
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className={cn(
+                    "transition-300 border-primary/10 hover:border-accent bg-primary relative flex size-8.5 cursor-pointer items-center justify-center overflow-clip rounded-full border-2 text-sm font-semibold text-white focus:outline-none active:scale-95",
+                    { "bg-transparent": session.user.image },
+                  )}
+                >
+                  {session.user?.image ? (
+                    <Image
+                      src={session.user.image}
+                      alt={session.user.name || "User profile"}
+                      fill
+                      sizes="100%"
+                      className="object-cover object-center"
+                    />
+                  ) : session.user?.name ? (
+                    session.user.name[0].toUpperCase()
+                  ) : (
+                    <User className="size-4" />
+                  )}
+                </button>
+
+                <UserProfile
+                  open={isProfileOpen}
+                  onClose={() => setIsProfileOpen(false)}
+                  user={session.user as SessionUser}
+                />
+              </div>
+            ) : (
+              <button
+                onClick={() => signIn("google")}
+                className="transition-300 hover:text-primary flex cursor-pointer items-center gap-2 rounded-full border border-zinc-100 bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm hover:border-zinc-200 hover:bg-zinc-300 active:scale-95"
+              >
+                <GoogleSvg className="size-4" />
+                Sign In
+              </button>
+            )}
+          </>
+
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="text-primary hover:text-accent transition-300 cursor-pointer p-1 focus:outline-none [&_svg]:size-6"
+            className="text-primary hover:text-accent transition-300 cursor-pointer p-1 focus:outline-none lg:hidden [&_svg]:size-6"
             aria-label="Toggle navigation menu"
           >
             {isOpen ? <X /> : <Menu />}
@@ -155,3 +227,76 @@ const navItems = [
   { name: "Q&A Practice", href: "/interview-practice", icon: CheckSquare },
   { name: "Blog", href: "/blog", icon: MessageSquare },
 ];
+
+const UserProfile = ({
+  onClose,
+  open,
+  user,
+}: {
+  user: SessionUser;
+  open: boolean;
+  onClose: () => void;
+}) => {
+  const { copied, copy } = useCopy();
+  return (
+    <main
+      className={cn(
+        "transition-300 absolute right-0 z-50 mt-2.5 w-60 origin-top-right rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl backdrop-blur-md",
+        { "pointer-events-none scale-0": !open },
+      )}
+    >
+      <div className="mb-1.5 border-b border-zinc-100 px-3 pt-2 pb-3">
+        <p className="truncate text-sm font-semibold text-zinc-900">
+          {user?.name || "CareerCraft User"}
+        </p>
+        {user?.email && (
+          <p
+            className={cn(
+              "transition-300 mt-0.5 flex cursor-pointer items-center justify-between gap-1 truncate text-left text-xs text-zinc-500 underline-offset-2 hover:underline [&_svg]:size-3.5",
+              {
+                "text-green-600": copied,
+              },
+            )}
+            onClick={() => copy(user?.email as string)}
+          >
+            {user?.email}
+            {copied ? <CopyCheck /> : <Copy />}
+          </p>
+        )}
+      </div>
+
+      {user?.isAdmin && (
+        <Link
+          href="/admin"
+          onClick={() => onClose()}
+          className="transition-300 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900 [&>svg]:size-4.5"
+        >
+          {user.isSuperAdmin ? (
+            <UserStar className="text-accent" />
+          ) : (
+            <UserRoundCog className="text-zinc-400" />
+          )}
+          Admin
+        </Link>
+      )}
+      <Link
+        href="/generator"
+        onClick={() => onClose()}
+        className="transition-300 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900"
+      >
+        <FileText className="size-4 text-zinc-400" />
+        My Resumes
+      </Link>
+      <button
+        onClick={() => {
+          onClose();
+          signOut();
+        }}
+        className="transition-300 flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-zinc-700 hover:bg-red-50 hover:text-red-700"
+      >
+        <LogOut className="size-4" />
+        Sign Out
+      </button>
+    </main>
+  );
+};

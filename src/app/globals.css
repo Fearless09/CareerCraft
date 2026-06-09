@@ -75,6 +75,16 @@ body {
   }
 }
 
+@keyframes wave {
+  0%,
+  100% {
+    height: 33%;
+  }
+  50% {
+    height: 100%;
+  }
+}
+
 @utility animate-fade-in-up {
   animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

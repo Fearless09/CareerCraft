@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import { Sparkles, Mail } from "lucide-react";
 import { GitHubSvg, XSvg } from "../shared/Svgs";

@@ -1,5 +1,34 @@
 import { ResumeData } from "@/types/resume";
 
+export const emptyResume: ResumeData = {
+  personalInfo: {
+    fullName: "",
+    jobTitle: "",
+    email: "",
+    phone: "",
+    location: "",
+    linkedIn: "",
+    website: "",
+    photoUrl: "",
+  },
+  summary: "",
+  experience: [],
+  education: [],
+  skills: {
+    technical: [],
+    soft: [],
+    languages: [],
+  },
+  projects: [],
+  certifications: [],
+  additionalSections: [],
+  meta: {
+    templateId: "classic",
+    accentColor: "#1e3a8a", // Default dark navy
+    lastUpdated: new Date().toISOString(),
+  },
+};
+
 const sampleResume1: ResumeData = {
   personalInfo: {
     fullName: "Jane Doe",

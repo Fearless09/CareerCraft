@@ -7,7 +7,9 @@ import {
   useEffect,
   ReactNode,
   useCallback,
+  useRef,
 } from "react";
+import { useSession } from "next-auth/react";
 import {
   ResumeData,
   ExperienceEntry,
@@ -18,13 +20,14 @@ import {
   PersonalInfo,
 } from "../types/resume";
 import { getStorageItem, setStorageItem } from "../lib/localStorage";
-import { sampleResume } from "@/data/sampleResume";
+import { emptyResume, sampleResume } from "@/data/sampleResume";
+import { apiRequest } from "@/lib/utils";
+import useSWR from "swr";
 
 interface ResumeContextType {
   resumeData: ResumeData;
   currentStep: number;
   setCurrentStep: (step: number) => void;
-  isDirty: boolean;
   updatePersonalInfo: (info: Partial<PersonalInfo>) => void;
   updateSummary: (summary: string) => void;
   addExperience: () => void;
@@ -55,337 +58,501 @@ interface ResumeContextType {
 const STORAGE_KEY = "cc_resume_data";
 const STEP_STORAGE_KEY = "cc_last_step";
 
-const emptyResume: ResumeData = {
-  personalInfo: {
-    fullName: "",
-    jobTitle: "",
-    email: "",
-    phone: "",
-    location: "",
-    linkedIn: "",
-    website: "",
-    photoUrl: "",
-  },
-  summary: "",
-  experience: [],
-  education: [],
-  skills: {
-    technical: [],
-    soft: [],
-    languages: [],
-  },
-  projects: [],
-  certifications: [],
-  additionalSections: [],
-  meta: {
-    templateId: "classic",
-    accentColor: "#1e3a8a", // Default dark navy
-    lastUpdated: new Date().toISOString(),
-  },
-};
-
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 
 export function ResumeProvider({ children }: { children: ReactNode }) {
-  const [resumeData, setResumeData] = useState<ResumeData>(sampleResume); // default to beautiful preseeded sample data
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const {
+    data: res,
+    isLoading,
+    error,
+    mutate,
+  } = useSWR<{ resume: ResumeData }, Error>("/api/resume", apiRequest);
+
+  const { status } = useSession();
+  const [resumeData, setResumeData] = useState<ResumeData>(emptyResume);
   const [currentStep, setCurrentStepState] = useState<number>(1);
-  const [isDirty, setIsDirty] = useState<boolean>(false);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
-  // Hydrate states from localStorage on mount
+  // 1. Hydrate states (Authenticated DB fetch or Unauthenticated localStorage)
   useEffect(() => {
-    const storedData = getStorageItem<ResumeData>(STORAGE_KEY, sampleResume);
-    const storedStep = getStorageItem<number>(STEP_STORAGE_KEY, 1);
-    setResumeData(storedData);
-    setCurrentStepState(storedStep);
-    setIsHydrated(true);
-  }, []);
+    if (status === "loading" || isLoading) return;
 
-  // Sync back to localStorage with simple write debounce
-  useEffect(() => {
-    if (isHydrated) {
-      const handler = setTimeout(() => {
-        setStorageItem(STORAGE_KEY, resumeData);
-      }, 500);
-      return () => clearTimeout(handler);
-    }
-  }, [resumeData, isHydrated]);
+    const hydrate = async () => {
+      // Step indicator is client-only UI state, load from localStorage
+      const storedStep = getStorageItem<number>(STEP_STORAGE_KEY, 1);
+      setCurrentStepState(storedStep);
+
+      const localData = getStorageItem<ResumeData>(STORAGE_KEY, emptyResume);
+
+      if (status === "authenticated") {
+        try {
+          setIsHydrated(false);
+          if (error) {
+            const msg =
+              error instanceof Error
+                ? error.message
+                : "Failed to fetch resume from database, falling back to local storage:";
+
+            console.error(msg, error);
+            setResumeData(localData);
+          } else if (res?.resume) {
+            // Found database-stored resume, use it
+            setResumeData(res.resume);
+          } else {
+            // No DB resume found. Check if localData holds actual user input and migrate it to DB
+            const isLocalModified =
+              JSON.stringify(localData) !== JSON.stringify(emptyResume) &&
+              JSON.stringify(localData) !== JSON.stringify(sampleResume);
+
+            if (isLocalModified) {
+              console.log("Migrating local draft resume to cloud database...");
+              await apiRequest<{ success: boolean }>("/api/resume", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ resumeData: localData }),
+              });
+              mutate({ resume: localData }, { revalidate: false });
+            }
+            setResumeData(localData);
+          }
+        } catch (error) {
+          const msg =
+            error instanceof Error ? error.message : "Something went wrong";
+          console.error(msg, error);
+          setResumeData(localData);
+        } finally {
+          setIsHydrated(true);
+        }
+      } else {
+        // Unauthenticated -> Use localStorage
+        setResumeData(localData);
+        setIsHydrated(true);
+      }
+    };
+
+    hydrate();
+  }, [status, isLoading]);
+
+  // 2. Debounced sync to database (if authenticated) and local safety net (always)
+  // useEffect(() => {
+  //   if (!isHydrated) return;
+
+  //   const handler = setTimeout(async () => {
+  //     // Always store locally as fallback
+  //     setStorageItem(STORAGE_KEY, resumeData);
+
+  //     if (status === "authenticated") {
+  //       try {
+  //         await apiRequest<{ success: boolean }>("/api/resume", {
+  //           method: "POST",
+  //           headers: { "Content-Type": "application/json" },
+  //           body: JSON.stringify({ resumeData }),
+  //         });
+  //         mutate({ resume: resumeData }, { revalidate: false });
+  //       } catch (error) {
+  //         console.error(
+  //           "Failed to automatically synchronize resume with DB:",
+  //           error,
+  //         );
+  //       }
+  //     }
+  //   }, 1000); // 1000ms debounce to prevent database query overhead
+
+  //   return () => clearTimeout(handler);
+  // }, [resumeData, isHydrated, status]);
+
+  const syncResume = useCallback(
+    (resume: ResumeData) => {
+      if (!isHydrated) return;
+
+      // Cancel the previous pending call ✅
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+
+      debounceRef.current = setTimeout(async () => {
+        const update: ResumeData = {
+          ...resume,
+          meta: { ...resume.meta, lastUpdated: new Date().toISOString() },
+        };
+
+        // Always store locally as fallback
+        setStorageItem(STORAGE_KEY, update);
+
+        if (status === "authenticated") {
+          try {
+            await apiRequest<{ success: boolean }>("/api/resume", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ resumeData: update }),
+            });
+            mutate({ resume: update }, { revalidate: false });
+          } catch (error) {
+            console.error(
+              "Failed to automatically synchronize resume with DB:",
+              error,
+            );
+          }
+        }
+      }, 1000);
+    },
+    [isHydrated, status],
+  );
 
   const setCurrentStep = useCallback((step: number) => {
     setCurrentStepState(step);
     setStorageItem(STEP_STORAGE_KEY, step);
   }, []);
 
-  const updatePersonalInfo = useCallback((info: Partial<PersonalInfo>) => {
-    setResumeData((prev) => ({
-      ...prev,
-      personalInfo: { ...prev.personalInfo, ...info },
-      meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-    }));
-    setIsDirty(true);
-  }, []);
+  const updatePersonalInfo = useCallback(
+    (info: Partial<PersonalInfo>) => {
+      const updated: ResumeData = {
+        ...resumeData,
+        personalInfo: { ...resumeData.personalInfo, ...info },
+      };
 
-  const updateSummary = useCallback((summary: string) => {
-    setResumeData((prev) => ({
-      ...prev,
-      summary,
-      meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-    }));
-    setIsDirty(true);
-  }, []);
+      setResumeData(updated);
+      syncResume(updated);
+    },
+    [resumeData],
+  );
+
+  const updateSummary = useCallback(
+    (summary: string) => {
+      if (summary === resumeData.summary) return;
+      const updated: ResumeData = {
+        ...resumeData,
+        summary,
+      };
+
+      setResumeData(updated);
+      syncResume(updated);
+    },
+    [resumeData],
+  );
 
   // repeatable Experience handlers
   const addExperience = useCallback(() => {
-    setResumeData((prev) => {
-      const newEntry: ExperienceEntry = {
-        id: `exp-${Math.random().toString(36).substring(2, 9)}`,
-        company: "",
-        jobTitle: "",
-        location: "",
-        startDate: "",
-        endDate: "",
-        bullets: [""],
-      };
-      return {
-        ...prev,
-        experience: [...prev.experience, newEntry],
-        meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-      };
-    });
-    setIsDirty(true);
-  }, []);
+    const newEntry: ExperienceEntry = {
+      id: `exp-${Math.random().toString(36).substring(2, 9)}`,
+      company: "",
+      jobTitle: "",
+      location: "",
+      startDate: "",
+      endDate: "",
+      bullets: [""],
+    };
+    const updated: ResumeData = {
+      ...resumeData,
+      experience: [...resumeData.experience, newEntry],
+    };
+
+    setResumeData(updated);
+    syncResume(updated);
+  }, [resumeData]);
 
   const updateExperience = useCallback(
     (id: string, data: Partial<ExperienceEntry>) => {
-      setResumeData((prev) => ({
-        ...prev,
-        experience: prev.experience.map((item) =>
+      const updated: ResumeData = {
+        ...resumeData,
+        experience: resumeData.experience.map((item) =>
           item.id === id ? { ...item, ...data } : item,
         ),
-        meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-      }));
-      setIsDirty(true);
+      };
+
+      setResumeData(updated);
+      setResumeData(updated);
     },
-    [],
+    [resumeData],
   );
 
-  const removeExperience = useCallback((id: string) => {
-    setResumeData((prev) => ({
-      ...prev,
-      experience: prev.experience.filter((item) => item.id !== id),
-      meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-    }));
-    setIsDirty(true);
-  }, []);
+  const removeExperience = useCallback(
+    (id: string) => {
+      const findExperience = resumeData.experience.find((e) => e.id === id);
+      if (!findExperience) return;
+
+      const updated: ResumeData = {
+        ...resumeData,
+        experience: resumeData.experience.filter((item) => item.id !== id),
+      };
+
+      setResumeData(updated);
+      syncResume(updated);
+    },
+    [resumeData],
+  );
 
   // repeatable Education handlers
   const addEducation = useCallback(() => {
-    setResumeData((prev) => {
-      const newEntry: EducationEntry = {
-        id: `edu-${Math.random().toString(36).substring(2, 9)}`,
-        institution: "",
-        degree: "",
-        fieldOfStudy: "",
-        startYear: "",
-        endYear: "",
-      };
-      return {
-        ...prev,
-        education: [...prev.education, newEntry],
-        meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-      };
-    });
-    setIsDirty(true);
-  }, []);
+    const newEntry: EducationEntry = {
+      id: `edu-${Math.random().toString(36).substring(2, 9)}`,
+      institution: "",
+      degree: "",
+      fieldOfStudy: "",
+      startYear: "",
+      endYear: "",
+    };
+    const updated: ResumeData = {
+      ...resumeData,
+      education: [...resumeData.education, newEntry],
+    };
+
+    setResumeData(updated);
+    syncResume(updated);
+  }, [resumeData]);
 
   const updateEducation = useCallback(
     (id: string, data: Partial<EducationEntry>) => {
-      setResumeData((prev) => ({
-        ...prev,
-        education: prev.education.map((item) =>
+      const findEductaion = resumeData.education.find((e) => e.id === id);
+      if (!findEductaion) return;
+
+      const updated: ResumeData = {
+        ...resumeData,
+        education: resumeData.education.map((item) =>
           item.id === id ? { ...item, ...data } : item,
         ),
-        meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-      }));
-      setIsDirty(true);
+      };
+
+      setResumeData(updated);
+      syncResume(updated);
     },
-    [],
+    [resumeData],
   );
 
-  const removeEducation = useCallback((id: string) => {
-    setResumeData((prev) => ({
-      ...prev,
-      education: prev.education.filter((item) => item.id !== id),
-      meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-    }));
-    setIsDirty(true);
-  }, []);
+  const removeEducation = useCallback(
+    (id: string) => {
+      const findEductaion = resumeData.education.find((e) => e.id === id);
+      if (!findEductaion) return;
+
+      const updated: ResumeData = {
+        ...resumeData,
+        education: resumeData.education.filter((item) => item.id !== id),
+      };
+
+      setResumeData(updated);
+      syncResume(updated);
+    },
+    [resumeData],
+  );
 
   // tag-based skills handler
   const updateSkills = useCallback(
     (category: keyof ResumeData["skills"], tags: string[]) => {
-      setResumeData((prev) => ({
-        ...prev,
-        skills: {
-          ...prev.skills,
-          [category]: tags,
-        },
-        meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-      }));
-      setIsDirty(true);
+      const isSameArr =
+        resumeData.skills[category].length === tags.length &&
+        resumeData.skills[category].every((val, idx) => val === tags[idx]);
+      if (isSameArr) return;
+
+      const updated: ResumeData = {
+        ...resumeData,
+        skills: { ...resumeData.skills, [category]: tags },
+      };
+
+      setResumeData(updated);
+      syncResume(updated);
     },
-    [],
+    [resumeData],
   );
 
   // repeatable Projects handlers
   const addProject = useCallback(() => {
-    setResumeData((prev) => {
-      const newEntry: ProjectEntry = {
-        id: `proj-${Math.random().toString(36).substring(2, 9)}`,
-        name: "",
-        description: "",
-        techStack: [],
-      };
-      return {
-        ...prev,
-        projects: [...prev.projects, newEntry],
-        meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-      };
-    });
-    setIsDirty(true);
-  }, []);
+    const newEntry: ProjectEntry = {
+      id: `proj-${Math.random().toString(36).substring(2, 9)}`,
+      name: "",
+      description: "",
+      techStack: [],
+    };
+    const updated: ResumeData = {
+      ...resumeData,
+      projects: [...resumeData.projects, newEntry],
+    };
+
+    setResumeData(updated);
+    syncResume(updated);
+  }, [resumeData]);
 
   const updateProject = useCallback(
     (id: string, data: Partial<ProjectEntry>) => {
-      setResumeData((prev) => ({
-        ...prev,
-        projects: prev.projects.map((item) =>
-          item.id === id ? { ...item, ...data } : item,
+      const findProject = resumeData.projects.find((p) => p.id === id);
+      if (!findProject) return;
+
+      const update: ResumeData = {
+        ...resumeData,
+        projects: resumeData.projects.map((p) =>
+          p.id === id ? { ...p, ...data } : p,
         ),
-        meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-      }));
-      setIsDirty(true);
+      };
+
+      setResumeData(update);
+      syncResume(update);
     },
-    [],
+    [resumeData],
   );
 
-  const removeProject = useCallback((id: string) => {
-    setResumeData((prev) => ({
-      ...prev,
-      projects: prev.projects.filter((item) => item.id !== id),
-      meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-    }));
-    setIsDirty(true);
-  }, []);
+  const removeProject = useCallback(
+    (id: string) => {
+      const findProject = resumeData.projects.find((p) => p.id === id);
+      if (!findProject) return;
+
+      const update: ResumeData = {
+        ...resumeData,
+        projects: resumeData.projects.filter((p) => p.id !== id),
+      };
+
+      setResumeData(update);
+      syncResume(update);
+    },
+    [resumeData],
+  );
 
   // repeatable Certifications handlers
   const addCertification = useCallback(() => {
-    setResumeData((prev) => {
-      const newEntry: CertificationEntry = {
-        id: `cert-${Math.random().toString(36).substring(2, 9)}`,
-        name: "",
-        issuer: "",
-        year: "",
-      };
-      return {
-        ...prev,
-        certifications: [...prev.certifications, newEntry],
-        meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-      };
-    });
-    setIsDirty(true);
-  }, []);
+    const newEntry: CertificationEntry = {
+      id: `cert-${Math.random().toString(36).substring(2, 9)}`,
+      name: "",
+      issuer: "",
+      year: "",
+    };
+    const update: ResumeData = {
+      ...resumeData,
+      certifications: [...resumeData.certifications, newEntry],
+    };
+
+    setResumeData(update);
+    syncResume(update);
+  }, [resumeData]);
 
   const updateCertification = useCallback(
     (id: string, data: Partial<CertificationEntry>) => {
-      setResumeData((prev) => ({
-        ...prev,
-        certifications: prev.certifications.map((item) =>
-          item.id === id ? { ...item, ...data } : item,
+      const findCert = resumeData.certifications.find((c) => c.id === id);
+      if (!findCert) return;
+
+      const update: ResumeData = {
+        ...resumeData,
+        certifications: resumeData.certifications.map((c) =>
+          c.id === id ? { ...c, ...data } : c,
         ),
-        meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-      }));
-      setIsDirty(true);
+      };
+
+      setResumeData(update);
+      syncResume(update);
     },
-    [],
+    [resumeData],
   );
 
-  const removeCertification = useCallback((id: string) => {
-    setResumeData((prev) => ({
-      ...prev,
-      certifications: prev.certifications.filter((item) => item.id !== id),
-      meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-    }));
-    setIsDirty(true);
-  }, []);
+  const removeCertification = useCallback(
+    (id: string) => {
+      const findCert = resumeData.certifications.find((c) => c.id === id);
+      if (!findCert) return;
+
+      const update: ResumeData = {
+        ...resumeData,
+        certifications: resumeData.certifications.filter((c) => c.id !== id),
+      };
+
+      setResumeData(update);
+      syncResume(update);
+    },
+    [resumeData],
+  );
 
   // Additional sections
-  const addAdditionalSection = useCallback((title: string) => {
-    setResumeData((prev) => {
+  const addAdditionalSection = useCallback(
+    (title: string) => {
       const newSection: AdditionalSection = {
         id: `add-${Math.random().toString(36).substring(2, 9)}`,
         title,
         items: [""],
       };
-      return {
-        ...prev,
-        additionalSections: [...prev.additionalSections, newSection],
-        meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
+      const update: ResumeData = {
+        ...resumeData,
+        additionalSections: [...resumeData.additionalSections, newSection],
       };
-    });
-    setIsDirty(true);
-  }, []);
 
-  const updateAdditionalSection = useCallback((id: string, items: string[]) => {
-    setResumeData((prev) => ({
-      ...prev,
-      additionalSections: prev.additionalSections.map((sect) =>
-        sect.id === id ? { ...sect, items } : sect,
-      ),
-      meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-    }));
-    setIsDirty(true);
-  }, []);
-
-  const removeAdditionalSection = useCallback((id: string) => {
-    setResumeData((prev) => ({
-      ...prev,
-      additionalSections: prev.additionalSections.filter(
-        (sect) => sect.id !== id,
-      ),
-      meta: { ...prev.meta, lastUpdated: new Date().toISOString() },
-    }));
-    setIsDirty(true);
-  }, []);
-
-  const setTemplate = useCallback(
-    (templateId: "classic" | "modern" | "minimal") => {
-      setResumeData((prev) => ({
-        ...prev,
-        meta: { ...prev.meta, templateId },
-      }));
-      setIsDirty(true);
+      setResumeData(update);
+      syncResume(update);
     },
-    [],
+    [resumeData],
   );
 
-  const setAccentColor = useCallback((accentColor: string) => {
-    setResumeData((prev) => ({
-      ...prev,
-      meta: { ...prev.meta, accentColor },
-    }));
-    setIsDirty(true);
-  }, []);
+  const updateAdditionalSection = useCallback(
+    (id: string, items: string[]) => {
+      const findAddSect = resumeData.additionalSections.find(
+        (a) => a.id === id,
+      );
+      if (!findAddSect) return;
+
+      const update: ResumeData = {
+        ...resumeData,
+        additionalSections: resumeData.additionalSections.map((a) =>
+          a.id === id ? { ...a, items } : a,
+        ),
+      };
+
+      setResumeData(update);
+      syncResume(update);
+    },
+    [resumeData],
+  );
+
+  const removeAdditionalSection = useCallback(
+    (id: string) => {
+      const findAddSect = resumeData.additionalSections.find(
+        (a) => a.id === id,
+      );
+      if (!findAddSect) return;
+
+      const update: ResumeData = {
+        ...resumeData,
+        additionalSections: resumeData.additionalSections.filter(
+          (a) => a.id !== id,
+        ),
+      };
+
+      setResumeData(update);
+      syncResume(update);
+    },
+    [resumeData],
+  );
+
+  const setTemplate = useCallback(
+    (templateId: ResumeData["meta"]["templateId"]) => {
+      if (resumeData.meta.templateId === templateId) return;
+
+      const update: ResumeData = {
+        ...resumeData,
+        meta: { ...resumeData.meta, templateId },
+      };
+
+      setResumeData(update);
+      syncResume(update);
+    },
+    [resumeData],
+  );
+
+  const setAccentColor = useCallback(
+    (accentColor: string) => {
+      if (resumeData.meta.accentColor === accentColor) return;
+
+      const update: ResumeData = {
+        ...resumeData,
+        meta: { ...resumeData.meta, accentColor },
+      };
+
+      setResumeData(update);
+      syncResume(update);
+    },
+    [resumeData],
+  );
 
   const clearResume = useCallback(() => {
     setResumeData(emptyResume);
-    setIsDirty(true);
-  }, []);
+    syncResume(emptyResume);
+  }, [resumeData]);
 
   const loadSampleData = useCallback(() => {
     setResumeData(sampleResume);
-    setIsDirty(true);
-  }, []);
+    syncResume(sampleResume);
+  }, [resumeData]);
 
   return (
     <ResumeContext.Provider
@@ -393,7 +560,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         resumeData,
         currentStep,
         setCurrentStep,
-        isDirty,
         updatePersonalInfo,
         updateSummary,
         addExperience,

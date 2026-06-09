@@ -6,6 +6,7 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import ToastNotification from "../components/shared/ToastNotification";
 import FeedbackWidget from "../components/shared/FeedbackWidget";
+import { Suspense } from "react";
 
 const dmSans = DM_Sans({
   variable: "--font-body",
@@ -51,17 +52,22 @@ export default function RootLayout({
       className={`${dmSans.variable} ${playfair.variable} h-full scroll-smooth antialiased`}
       data-scroll-behavior="smooth"
     >
-      <body className="font-body text-primary flex min-h-full flex-col bg-zinc-50">
-        <AppProvider>
-          <Navbar />
-          {/* Main content pushed down to avoid navbar overlap */}
-          <main className="flex min-h-[calc(100vh-250px)] flex-1 flex-col pt-19">
-            {children}
-          </main>
-          <Footer />
-          <ToastNotification />
-          <FeedbackWidget />
-        </AppProvider>
+      <body className="font-body text-primary flex min-h-full flex-col bg-zinc-50 antialiased">
+        <Suspense>
+          <AppProvider>
+            <Navbar />
+            {/* Main content pushed down to avoid navbar overlap */}
+            <main
+              id="main"
+              className="flex min-h-[calc(100vh-250px)] flex-1 flex-col pt-19"
+            >
+              {children}
+            </main>
+            <Footer />
+            <ToastNotification />
+            <FeedbackWidget />
+          </AppProvider>
+        </Suspense>
       </body>
     </html>
   );

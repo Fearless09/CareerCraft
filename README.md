@@ -6,7 +6,7 @@
 
 _Craft your career. Land the job._
 
-[![Version](https://img.shields.io/badge/version-1.1.2-e94560?style=flat-square)](./CHANGE-LOG.md)
+[![Version](https://img.shields.io/badge/version-1.2.0-e94560?style=flat-square)](./CHANGE-LOG.md)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06b6d4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com)
@@ -596,15 +596,16 @@ The following has been delivered as of **v1.1.2**:
 ## 📌 Current Version
 
 ```
-CareerCraft v1.1.2
-Released: May 2026
+CareerCraft v1.2.0
+Released: June 2026
 ```
 
-**What's new in v1.1.2:**
+**What's new in v1.2.0:**
 
-- FeedbackModal and FeedbackWidget components added for in-app user feedback
-- Centralised SVG definitions via `Svgs.tsx`
-- Continued Navbar accessibility and styling refinements
+- Transitioned the entire administrator panel to a premium zinc-based light theme for design consistency
+- Implemented the Q&A Practice admin manager supporting behavioral (STAR) and general questions
+- Implemented the active Administrators list and permission manager page with built-in self-revocation safety
+- Transitioned the interview guide administrator manager layout to light mode
 
 See the full [CHANGE-LOG.md](./CHANGE-LOG.md) for a complete version history.
 

@@ -22,6 +22,30 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [1.2.0] - 2026-06-02
+
+### Added
+
+- **Admin Q&A Practice Manager** (`/admin/practice`): Implemented a full CRUD manager for interview practice questions. Features category filtering (General, Behavioral, Situational, Strengths & Weaknesses, Remote Work), a global search bar, collapsible model-answer previews (inline STAR cards for Behavioral, general answer for all other types), and a slide-over form with context-sensitive fields — STAR fields (Situation, Task, Action, Result) for Behavioral, and a General Answer textarea for all other categories.
+- **Admin Administrators Manager** (`/admin/admins`): Implemented the administrator list and permission management page. Lists all active admins in a data table with avatar, name, email, role badge, and join date. Includes a promote-by-email form (POST `/api/admin`) and a demote action with a confirmation modal. Self-revocation is blocked server-side and disabled in the UI to prevent accidental lockout.
+
+### Improved
+
+- **Admin Layout** (`src/app/admin/layout.tsx`): Transitioned the full sidebar, drawer navigation, session profile card, and layout frame from a dark `slate`-based palette to the project's canonical zinc/white light theme — `bg-white`, `border-zinc-200`, `text-zinc-900` accent borders.
+- **Admin Overview Dashboard** (`src/app/admin/page.tsx`): Converted the overview metric cards, quick-action shortcuts, and system status panels to the light zinc palette with correct `text-zinc-900` primary text and `bg-white border-zinc-200` card surfaces.
+- **Admin Tips Manager** (`src/app/admin/tips/page.tsx`): Migrated tabs, category filter pills, tip article cards, and slide-over form sheet from dark mode to light zinc styling.
+- **Admin Blog Manager** (`src/app/admin/blogs/page.tsx`): Converted blog post grid cards, hover action overlays, the Vercel Blob image uploader, and the Markdown editor slide-over panel from dark to light theme.
+- **Admin Resume Guide Manager** (`src/app/admin/resume-guide/page.tsx`): Transitioned guide section list, sorting buttons, and slide-over form sheet to the light zinc design system.
+- **Admin Interview Guide Manager** (`src/app/admin/interview-guide/page.tsx`): Replaced all `slate` dark-mode classes with zinc light equivalents — `bg-white`, `border-zinc-200`, `text-zinc-900`, `text-zinc-500` — across the guide section listing, CRUD actions toolbar, slide-over form, and delete confirmation modal.
+
+### Documentation
+
+- **README.md**: Updated version badge to `v1.2.0`, added v1.2.0 current-version release notes, and updated the Pages & Routes table to include all admin sub-routes.
+- **CHANGE-LOG.md**: Added this v1.2.0 entry capturing all admin UI improvements and new page additions.
+- **package.json**: Bumped `version` field to `1.2.0`.
+
+---
+
 ## [1.1.2] - 2026-05-24
 
 ### Added
