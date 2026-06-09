@@ -122,18 +122,7 @@ export default function BlogListingPage() {
           </h3>
           <p className="px-6 text-xs text-zinc-500">
             We couldn&apos;t find any articles, matching your search query. Try
-            keywords like{" "}
-            {categories.slice(1, 5).map((cat, indx, arr) => (
-              <Fragment key={indx}>
-                {cat}
-                {indx === arr.length - 2
-                  ? " or "
-                  : indx < arr.length - 1
-                    ? ", "
-                    : ""}
-              </Fragment>
-            ))}
-            .
+            keywords like {categories.join(" ")}.
           </p>
         </main>
       ) : (
@@ -198,22 +187,22 @@ export default function BlogListingPage() {
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-4">
                     {/* Author details */}
                     <div className="flex items-center gap-2">
-                      <span className="text-primary font-display flex size-8.5 items-center justify-center rounded-full border border-zinc-300 bg-zinc-200 text-xs font-bold uppercase">
-                        {post.author.name ? (
-                          post.author.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                        ) : post.author.image ? (
+                      <span className="text-primary font-display relative flex size-8.5 items-center justify-center overflow-clip rounded-full border border-zinc-300 bg-zinc-200 text-xs font-bold uppercase shadow-sm">
+                        {post.author.image ? (
                           <Image
-                            src={post.author.image}
                             alt={post.author.name || "Author"}
+                            src={post.author.image}
                             fill
                             sizes="100%"
                             className="object-cover object-center"
                           />
+                        ) : post.author.name ? (
+                          post.author.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
                         ) : (
-                          <UserRound className="size-4" />
+                          <UserRound className="size-5.5" />
                         )}
                       </span>
                       <div className="font-semibold">
