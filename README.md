@@ -6,7 +6,7 @@
 
 _Craft your career. Land the job._
 
-[![Version](https://img.shields.io/badge/version-1.2.0-e94560?style=flat-square)](./CHANGE-LOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.0-e94560?style=flat-square)](./CHANGE-LOG.md)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06b6d4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com)
@@ -52,8 +52,10 @@ At its core, CareerCraft delivers:
 - A **curated tips library** covering resume writing and interview performance do's and don'ts
 - **Step-by-step written guides** for both resume writing and interview preparation
 - An **interactive interview practice tool** with model answers, STAR breakdowns, bookmarks, and progress tracking
-- A **career-focused blog** with in-depth articles tailored for job seekers
-- Zero sign-up friction — all progress is saved locally with no account required in MVP
+- A **career-focused blog** with in-depth articles, markdown parsing, and cover image support
+- **Zero sign-up friction** — progress is saved locally by default, with automatic cloud synchronization to a PostgreSQL database once logged in via Google OAuth
+- An **integrated Admin CMS Portal** allowing authorized administrators to manage guides, daily tips, practice questions, blog articles (with image uploads), and administrator role permissions
+- A **GitHub-integrated feedback system** to submit structured issues and bug reports from any view directly to the development repository
 
 ---
 
@@ -206,16 +208,19 @@ Career-focused articles written for 2026 job seekers.
 
 | Layer                   | Technology                         | Notes                                                                        |
 | ----------------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
-| **Framework**           | Next.js 16 (App Router)            | SSR/SSG for content pages; CSR for the generator and practice tool           |
+| **Framework**           | Next.js 16 (App Router)            | SSR/SSG for content pages; CSR/SSR for admin & generator                     |
 | **Language**            | TypeScript 5 (strict mode)         | End-to-end type safety                                                       |
 | **Styling**             | Tailwind CSS v4                    | Utility-first; custom design tokens via `@theme` directive                   |
 | **Conditional Classes** | `clsx` + `tailwind-merge` (`cn()`) | All dynamic `className` expressions use the shared `cn()` helper             |
-| **State Management**    | React Context API                  | `ResumeContext`, `ProgressContext`, `UIContext` — all synced to localStorage |
-| **Storage (MVP)**       | `localStorage`                     | Persists resume data, user progress, and draft reads                         |
-| **PDF Export**          | `html2canvas-pro` + `jsPDF`        | Client-side PDF generation from the live preview panel                       |
+| **State Management**    | React Context API + SWR            | Client-side contexts hydrated and synchronized with server SWR queries       |
+| **Authentication**      | NextAuth (next-auth v4)            | Google OAuth provider; custom JWT-to-session admin checks                    |
+| **Database & ORM**      | Drizzle ORM + PostgreSQL           | PostgreSQL connection pool with primary & 2 read replicas using `withReplicas` adapter |
+| **Storage (Local)**     | `localStorage`                     | Fallback local backup safety net; offline support for guests                 |
+| **PDF Export**          | `html2canvas-pro` + `jsPDF`        | Client-side PDF generation with padding-aware page block engine               |
+| **Image Hosting**       | Vercel Blob Storage                | Uploads and hosts blog cover images via `@vercel/blob` upload APIs           |
 | **Icons**               | Lucide React                       | Consistent, minimal icon set                                                 |
 | **Animations**          | CSS / Tailwind CSS v4 only         | Custom `@keyframes` in `globals.css`; no Framer Motion                       |
-| **Validation**          | Zod                                | Schema validation for form data and data models                              |
+| **Validation**          | Zod                                | Schema validation for form data and API endpoints                            |
 | **Package Manager**     | pnpm                               | Workspace-aware; fast installs                                               |
 | **Linting**             | ESLint 9 + Prettier 3              | Enforced formatting and code quality                                         |
 
@@ -224,27 +229,43 @@ Career-focused articles written for 2026 job seekers.
 ## 🏗 Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Browser (Client)                   │
-│                                                     │
-│  ┌──────────────────┐  ┌──────────────────────────┐ │
-│  │  React Context   │◄─│  React Component Tree    │ │
-│  │  - ResumeContext │  │  (Next.js 16 App Router) │ │
-│  │  - ProgressCtx   │  └──────────────────────────┘ │
-│  │  - UIContext     │                               │
-│  └────────┬─────────┘                               │
-│           │                                         │
-│  ┌────────▼─────────┐                               │
-│  │  localStorage    │  (Persist resume + progress)  │
-│  └──────────────────┘                               │
-└─────────────────────────────────────────────────────┘
-         │  (Future — Phase 2)
-┌────────▼──────────────────────┐
-│   Express REST API            │
-│   - User auth (JWT)           │
-│   - Cloud resume storage      │
-│   - Blog CMS endpoints        │
-└───────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        Browser (Client)                         │
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────────┐   │
+│   │                 React Component Tree                    │   │
+│   │               (Next.js 16 App Router)                   │   │
+│   └──────────┬────────────────────────────────────▲─────────┘   │
+│              │                                    │             │
+│              │ (useResume/useProgress)            │ (useSWR)    │
+│              ▼                                    │             │
+│   ┌──────────────────┐  (Debounced local)   ┌─────┴─────────┐   │
+│   │  React Context   ├─────────────────────►│ localStorage  │   │
+│   │  - ResumeContext │                      │ (Local Backup)│   │
+│   │  - ProgressCtx   │                      └───────────────┘   │
+│   │  - UIContext     │                                          │
+│   └──────────┬───────┘                                          │
+└──────────────┼──────────────────────────────────────────────────┘
+               │ (API calls: /api/resume, /api/progress)
+               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Next.js API Routes (Server)                   │
+│                                                                 │
+│   ┌──────────────────┐  ┌──────────────────┐  ┌─────────────┐   │
+│   │  NextAuth (JWT)  │  │   Drizzle ORM    │  │ Vercel Blob │   │
+│   │  - Google OAuth  │  │   - Schema logic │  │  - Images   │   │
+│   └────────┬─────────┘  └────────┬─────────┘  └─────────────┘   │
+└────────────┼─────────────────────┼──────────────────────────────┘
+             │                     │
+             ▼ (Adapter checks)    ▼ (SQL Queries)
+┌─────────────────────────────────────────────────────────────────┐
+│                       PostgreSQL Database                       │
+│                                                                 │
+│         ┌──────────────┐          ┌──────────────────────┐      │
+│         │  Primary DB  ├─────────►│ Read Replicas (x2)   │      │
+│         │  (Writes)    │ (Sync)   │ (Replica reads)      │      │
+│         └──────────────┘          └──────────────────────┘      │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 All state lives in React Context with no third-party state library. Contexts are composed under a single `<AppProvider>` in `app/layout.tsx`, each independently hydrating from and syncing to `localStorage` with debounced writes.
@@ -259,7 +280,8 @@ career_craft/
 │   ├── app/                              # Next.js 16 App Router
 │   │   ├── layout.tsx                    # Root layout (Navbar, Footer, Providers)
 │   │   ├── page.tsx                      # Home page
-│   │   ├── globals.css                   # Global styles & @theme tokens
+│   │   ├── globals.css                   # Global styles & theme tokens
+│   │   ├── loading.tsx                   # Page loading indicator
 │   │   ├── icon.tsx                      # App icon generation
 │   │   ├── generator/
 │   │   │   └── page.tsx                  # Resume Generator (CSR)
@@ -275,12 +297,34 @@ career_craft/
 │   │   │   ├── page.tsx                  # Blog listing page
 │   │   │   └── [slug]/
 │   │   │       └── page.tsx              # Blog article page
-│   │   └── api/                          # API routes (placeholder for Phase 2)
+│   │   ├── admin/                        # Admin Portal Managers (Phase 2 CMS)
+│   │   │   ├── layout.tsx                # Admin server layout wrapper
+│   │   │   ├── page.tsx                  # Admin overview dashboard
+│   │   │   ├── tips/
+│   │   │   │   └── page.tsx              # Manage Daily Tips CRUD
+│   │   │   ├── resume-guide/
+│   │   │   │   └── page.tsx              # Manage Resume Guide CRUD
+│   │   │   ├── interview-guide/
+│   │   │   │   └── page.tsx              # Manage Interview Guide CRUD
+│   │   │   ├── blogs/
+│   │   │   │   └── page.tsx              # Manage Blogs CRUD with image upload
+│   │   │   ├── practice/
+│   │   │   │   └── page.tsx              # Manage Q&A Practice CRUD
+│   │   │   └── admins/
+│   │   │       └── page.tsx              # Manage Administrator Permissions
+│   │   └── api/                          # Next.js API Routes (Backend Layer)
+│   │       ├── auth/[...nextauth]/       # NextAuth.js OAuth configuration
+│   │       ├── resume/                   # Fetch / Sync active resumes
+│   │       ├── progress/                 # Fetch / Sync learning progress
+│   │       ├── feedback/                 # GitHub integrated issue submission
+│   │       └── admin/                    # CRUD API endpoints for resources
 │   │
 │   ├── components/
 │   │   ├── layout/
 │   │   │   ├── Navbar.tsx                # Sticky nav with active page highlighting
 │   │   │   └── Footer.tsx                # Site footer
+│   │   ├── admin/
+│   │   │   └── AdminLayout.tsx           # Sidebar, drawer navigation & profile
 │   │   ├── generator/
 │   │   │   ├── ResumeForm/               # Multi-step form sections
 │   │   │   │   ├── PersonalInfoSection.tsx
@@ -297,38 +341,54 @@ career_craft/
 │   │   │           ├── ModernTemplate.tsx
 │   │   │           └── MinimalTemplate.tsx
 │   │   ├── blog/
-│   │   │   ├── BlogCard.tsx
 │   │   │   └── BlogContent.tsx
 │   │   └── shared/
 │   │       ├── FeedbackModal.tsx         # User feedback modal
 │   │       ├── FeedbackWidget.tsx        # Floating feedback trigger
-│   │       ├── Svgs.tsx                  # Centralised SVG definitions
-│   │       └── ToastNotification.tsx     # Auto-dismissing toast alerts
+│   │       ├── Loader.tsx                # Unified wave-animated loading spinner
+│   │       ├── ToastNotification.tsx     # Auto-dismissing toast alerts
+│   │       ├── DeletModal.tsx            # Admin delete confirmation modal
+│   │       └── AddnUpdateModalWrapper.tsx # Admin CRUD slide-over wrapper drawer
 │   │
 │   ├── context/
-│   │   ├── ResumeContext.tsx             # Resume form data + actions
-│   │   ├── ProgressContext.tsx           # User activity progress
+│   │   ├── ResumeContext.tsx             # Resume state sync, db fetch & local backup
+│   │   ├── ProgressContext.tsx           # Practice/bookmarks progress synchronization
 │   │   ├── UIContext.tsx                 # Active tab, step, toast queue
 │   │   └── index.tsx                    # Combined AppProvider barrel export
 │   │
+│   ├── db/                               # Drizzle ORM Setup & Schema
+│   │   ├── index.ts                      # PG Pool setup with replica read-splitting
+│   │   ├── schema/                       # Declarative drizzle table definitions
+│   │   │   ├── index.ts                  # Schemas barrel export & NextAuth tables
+│   │   │   ├── admin.ts                  # Admin user roles mapping
+│   │   │   ├── resume.ts                 # Resume documents jsonb store
+│   │   │   ├── userProgress.ts           # Progress metadata jsonb store
+│   │   │   ├── tip.ts                    # Career tips schema
+│   │   │   ├── guide.ts                  # Guide chapters schema
+│   │   │   ├── practiceQuestion.ts       # Interview Q&A questions schema
+│   │   │   └── blog.ts                   # Blog posts schema
+│   │   └── migrations/                   # SQL migrations generated by drizzle-kit
+│   │
 │   ├── data/
-│   │   ├── tips.ts                       # Static tips data
-│   │   ├── resumeGuide.ts                # Guide content sections
-│   │   ├── interviewGuide.ts             # Interview guide content
-│   │   ├── practiceQuestions.ts          # Q&A data with STAR annotations
-│   │   └── blog/                         # JSON blog article data
+│   │   └── sampleResume.ts               # Sample resume data template
 │   │
 │   ├── types/
-│   │   └── resume.ts                     # TypeScript interfaces
+│   │   ├── resume.ts                     # TypeScript interfaces
+│   │   ├── drizzle.d.ts                  # Schema inferences helper
+│   │   └── nextauth.d.ts                 # NextAuth Session typings override
 │   │
-│   └── lib/
-│       ├── utils.ts                      # cn() helper (clsx + tailwind-merge)
-│       ├── pdfExport.ts                  # PDF generation & page block engine
-│       └── localStorage.ts               # Storage read/write utilities
+│   ├── hooks/
+│   │   └── useCopy.tsx                   # Text clipboard copying helper
+│   │
+│   ├── lib/
+│   │   ├── utils.ts                      # cn() helper (clsx + tailwind-merge)
+│   │   ├── pdfExport.ts                  # PDF generation & page block engine
+│   │   └── localStorage.ts               # Storage read/write utilities
+│   │
+│   └── proxy.ts                          # Next.js dev server proxy rules
 │
 ├── public/
 │   └── assets/                           # Static assets
-│
 ├── PRD.md                                # Product Requirements Document
 ├── CHANGE-LOG.md                         # Version history
 ├── README.md                             # This file
@@ -346,31 +406,58 @@ career_craft/
 
 - **Node.js** `>= 20.x`
 - **pnpm** `>= 9.x` — Install with `npm install -g pnpm`
+- **PostgreSQL** database instance
 
-### Installation
+### Installation & Database Setup
 
-```bash
-# Clone the repository
-git clone https://github.com/Fearless09/CareerCraft.git
-cd career_craft
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Fearless09/CareerCraft.git
+   cd career_craft
+   ```
 
-# Install dependencies
-pnpm install
+2. **Install dependencies:**
+   ```bash
+   pnpm install
+   ```
 
-# Start the development server
-pnpm run dev
-```
+3. **Configure Environment Variables:**
+   Create a `.env.local` file in the project root with the following configuration:
+   ```env
+   # Database credentials (including primary DB & 2 read replicas)
+   DATABASE_URL="postgresql://user:password@localhost:5432/careercraft"
+   DATABASE_REPLICA_1="postgresql://user:password@replica1:5432/careercraft"
+   DATABASE_REPLICA_2="postgresql://user:password@replica2:5432/careercraft"
+
+   # NextAuth Configuration
+   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_SECRET="your-jwt-auth-secret-key"
+
+   # OAuth Providers (Google Client Credentials)
+   AUTH_GOOGLE_ID="your-google-oauth-client-id"
+   AUTH_GOOGLE_SECRET="your-google-oauth-client-secret"
+
+   # Feedback Integration (GitHub Personal Token & Repo Details)
+   GITHUB_TOKEN="your-github-personal-access-token"
+   GITHUB_OWNER="Fearless09"
+   GITHUB_REPO="CareerCraft"
+
+   # Vercel Blob Image Uploads
+   BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
+   ```
+
+4. **Run Database Migrations:**
+   ```bash
+   # Push structural schema changes directly to PostgreSQL database
+   pnpm run db:push
+   ```
+
+5. **Start the development server:**
+   ```bash
+   pnpm run dev
+   ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Environment Variables
-
-Create a `.env.local` file in the project root (see `.env.local` for reference — do not commit real secrets):
-
-```env
-# Phase 2 — not required for MVP local development
-NEXT_PUBLIC_API_URL=
-```
 
 ---
 
@@ -387,6 +474,8 @@ NEXT_PUBLIC_API_URL=
 
 ## 🗺 Pages & Routes
 
+### Front-End Web Routes
+
 | Route                 | Page                        | Rendering            |
 | --------------------- | --------------------------- | -------------------- |
 | `/`                   | Home                        | SSG                  |
@@ -397,7 +486,30 @@ NEXT_PUBLIC_API_URL=
 | `/interview-practice` | Interview Practice Tool     | CSR (`'use client'`) |
 | `/blog`               | Blog Listing                | SSG + ISR            |
 | `/blog/[slug]`        | Blog Article                | SSG + ISR            |
+| `/admin`              | Admin Dashboard Overview    | SSG + Session Guards |
+| `/admin/tips`         | Admin Tips Manager          | CSR + Session Guards |
+| `/admin/resume-guide` | Admin Resume Guide Manager  | CSR + Session Guards |
+| `/admin/interview-guide`| Admin Interview Guide Manager| CSR + Session Guards |
+| `/admin/blogs`        | Admin Blogs Manager         | CSR + Session Guards |
+| `/admin/practice`     | Admin Q&A Practice Manager  | CSR + Session Guards |
+| `/admin/admins`       | Admin Administrators Manager| CSR + Session Guards |
 | `*`                   | 404 Not Found               | Static               |
+
+### Back-End API Routes
+
+| Route | Method | Purpose |
+|---|---|---|
+| `/api/auth/[...nextauth]` | GET, POST | OAuth authentication and session callbacks |
+| `/api/resume` | GET, POST | Fetch database resume / update active resume data |
+| `/api/progress` | GET, POST | Fetch database progress logs / update progress metadata |
+| `/api/feedback` | POST | Submits feedback details as a GitHub repository issue |
+| `/api/admin` | GET, POST | Fetch admin registries / promote admins by email |
+| `/api/admin/check` | GET | Verify whether active session corresponds to an admin role |
+| `/api/admin/blogs` | GET, POST, PUT, DELETE | CRUD operations on the database Blog table |
+| `/api/admin/guides` | GET, POST, PUT, DELETE | CRUD operations on the database Guide table |
+| `/api/admin/tips` | GET, POST, PUT, DELETE | CRUD operations on the database Tip table |
+| `/api/admin/practice` | GET, POST, PUT, DELETE | CRUD operations on the database Practice Question table |
+| `/api/admin/upload` | POST | Image upload proxy to Vercel Blob storage |
 
 ---
 
@@ -525,7 +637,7 @@ All animations use **CSS only** — Tailwind transition utilities and custom `@k
 
 ## ✅ What Has Been Built
 
-The following has been delivered as of **v1.1.2**:
+The following has been delivered as of **v1.3.0**:
 
 | Area                                                      | Status      | Notes                                  |
 | --------------------------------------------------------- | ----------- | -------------------------------------- |
@@ -546,20 +658,17 @@ The following has been delivered as of **v1.1.2**:
 | FeedbackModal & FeedbackWidget                            | ✅ Complete | Floating persistent widget             |
 | Custom icon generation                                    | ✅ Complete |                                        |
 | Code style alignment (linting + formatting)               | ✅ Complete | ESLint 9 + Prettier 3                  |
+| Database Layer (PostgreSQL, Drizzle ORM, withReplicas)    | ✅ Complete | Primary pool & 2 read replicas setup   |
+| Google OAuth authentication via NextAuth                  | ✅ Complete | secure session and role-based callbacks|
+| Cloud sync for Resume & Progress contexts via SWR         | ✅ Complete | Automated local-to-cloud data migration|
+| Floating widget integrated with GitHub Issues             | ✅ Complete | Submits verified bugs & suggestions    |
+| Wave-animated loader component (`Loader.tsx`)             | ✅ Complete | Unified loading states across pages    |
+| Comprehensive Admin Panel and CMS managers                | ✅ Complete | Blogs, Guides, Tips, Practice, Admins  |
+| Admin Panel premium light-zinc design                     | ✅ Complete | Complete theme transition for managers  |
 
 ---
 
 ## 🔮 What Is Coming Next
-
-### Phase 2 — Backend & Accounts
-
-| Feature                     | Description                                                              |
-| --------------------------- | ------------------------------------------------------------------------ |
-| **User Authentication**     | Email + OAuth sign-in via an Express REST API with JWT                   |
-| **Cloud Resume Storage**    | Save and manage multiple resumes per account (PostgreSQL + Prisma)       |
-| **Admin Blog CMS**          | Create and manage blog articles via an admin panel with markdown support |
-| **Email Newsletter Signup** | Subscribe to a CareerCraft newsletter                                    |
-| **Dark Mode**               | Full Tailwind `dark:` variant support; user preference persisted         |
 
 ### Phase 3 — AI & Power Features
 
@@ -567,13 +676,15 @@ The following has been delivered as of **v1.1.2**:
 | ----------------------------------- | ------------------------------------------------------------- |
 | **AI Summary & Bullet Suggestions** | LLM-powered professional summary and bullet-point generation  |
 | **Cover Letter Generator**          | Generate a tailored cover letter using resume data as context |
+| **Persisted Dark Mode**             | Full Tailwind `dark:` variant support; user preference cached |
+| **Multiple Saved Resumes**          | Manage multiple resumes per account (name and clone copies)   |
+
+### Phase 4 — Social & Mobile
+
+| Feature | Description |
+|---|---|
 | **ATS Score Checker**               | Keyword match scoring against a pasted job description        |
 | **Resume Public Sharing**           | Share your resume via a unique public link                    |
-
-### Phase 4 — Mobile
-
-| Feature              | Description                                                    |
-| -------------------- | -------------------------------------------------------------- |
 | **React Native App** | Full mobile application sharing types and API with the web app |
 
 ---
@@ -582,30 +693,33 @@ The following has been delivered as of **v1.1.2**:
 
 | Milestone                   | Deliverables                                                          | Target       |
 | --------------------------- | --------------------------------------------------------------------- | ------------ |
-| **M1 – Foundation**         | Repo, Next.js 16, Tailwind v4, `cn()`, layout, routing                | Jan 2026     |
-| **M2 – Resume Generator**   | All form sections, live preview, templates, localStorage, PDF export  | Feb–Mar 2026 |
-| **M3 – Resource Pages**     | Tips, Resume Guide, Interview Guide                                   | Mar–Apr 2026 |
-| **M4 – Interview Practice** | Q&A browser, STAR, bookmarks, random mode, progress tracking          | Apr 2026     |
-| **M5 – Blog**               | Listing page, article page, 8 seed articles                           | May 2026     |
-| **M6 – Home Page**          | Full home page with all sections and Page Directory cards             | May 2026     |
-| **M7 – Polish & QA**        | Responsive fixes, a11y audit, animation review, cross-browser testing | Jun 2026     |
-| **M8 – Launch**             | Vercel deployment, domain, final review, public announcement          | Jun 2026     |
+| **M1 – Foundation**         | Repo, Next.js 16, Tailwind v4, `cn()`, layout, routing                | ✅ Complete  |
+| **M2 – Resume Generator**   | All form sections, live preview, templates, localStorage, PDF export  | ✅ Complete  |
+| **M3 – Resource Pages**     | Tips, Resume Guide, Interview Guide                                   | ✅ Complete  |
+| **M4 – Interview Practice** | Q&A browser, STAR, bookmarks, random mode, progress tracking          | ✅ Complete  |
+| **M5 – Blog**               | Listing page, article page, 8 seed articles                           | ✅ Complete  |
+| **M6 – Home Page**          | Full home page with all sections and Page Directory cards             | ✅ Complete  |
+| **M7 – Polish & QA**        | Feedback widget, wave loaders, scroll lock, metadata optimization     | ✅ Complete  |
+| **M8 – Backend Integration**| Drizzle ORM, PostgreSQL database, Google OAuth, SWR sync, Admin Panel | ✅ Complete  |
 
 ---
 
 ## 📌 Current Version
 
 ```
-CareerCraft v1.2.0
+CareerCraft v1.3.0
 Released: June 2026
 ```
 
-**What's new in v1.2.0:**
+**What's new in v1.3.0:**
 
-- Transitioned the entire administrator panel to a premium zinc-based light theme for design consistency
-- Implemented the Q&A Practice admin manager supporting behavioral (STAR) and general questions
-- Implemented the active Administrators list and permission manager page with built-in self-revocation safety
-- Transitioned the interview guide administrator manager layout to light mode
+- Configured PostgreSQL database connection with Drizzle ORM and 2 read replicas using replica read-splitting (`withReplicas`).
+- Integrated NextAuth Google OAuth login mapping accounts, sessions, and roles to the database.
+- Implemented real-time resume and progress sync to PostgreSQL via client SWR hooks with manual debouncing (1s delay).
+- Added a floating persistent Feedback Widget and modal integrated with the GitHub repository API to log issues automatically.
+- Replaced all inline loading animations with a unified wave-animated component (`Loader`).
+- Transitioned the entire administrator panel to a premium zinc-based light theme for design consistency.
+- Built a comprehensive set of admin managers for tips, guides (sort order), blog posts (markdown, image uploads), Q&A practice (STAR answers), and admin permissions.
 
 See the full [CHANGE-LOG.md](./CHANGE-LOG.md) for a complete version history.
 
