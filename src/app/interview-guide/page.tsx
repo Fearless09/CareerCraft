@@ -2,16 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  Check,
-  CornerDownRight,
-  HelpCircle,
-  Loader2,
-  MoveRight,
-} from "lucide-react";
+import { Check, CornerDownRight, HelpCircle, MoveRight } from "lucide-react";
 import { apiRequest, cn } from "../../lib/utils";
 import useSWR from "swr";
 import { Guide } from "@/db/schema";
+import { Loader } from "@/components/shared/Loader";
 
 export default function InterviewGuidePage() {
   const { data, isLoading } = useSWR<{
@@ -141,7 +136,7 @@ export default function InterviewGuidePage() {
 
           {isLoading ? (
             <div className="flex h-50 flex-col items-center justify-center gap-3">
-              <Loader2 className="text-accent size-10 animate-spin" />
+              <Loader length={12} />
               <span className="text-xs font-medium text-zinc-500">
                 Loading interview strategy blueprint...
               </span>

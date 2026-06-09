@@ -31,9 +31,10 @@ import {
 } from "lucide-react";
 import { useResume } from "@/context";
 import { cn } from "@/lib/utils";
+import { Loader } from "@/components/shared/Loader";
 
 export default function GeneratorPage() {
-  const { currentStep, setCurrentStep, clearResume, loadSampleData, isDirty } =
+  const { currentStep, setCurrentStep, clearResume, loadSampleData } =
     useResume();
 
   const { mobilePreviewActive, setMobilePreviewActive, addToast } = useUI();
@@ -50,7 +51,7 @@ export default function GeneratorPage() {
         id="intializing"
         className="flex min-h-120 flex-1 flex-col items-center justify-center gap-3 bg-zinc-950 text-zinc-400"
       >
-        <span className="border-accent size-8 animate-spin rounded-full border-2 border-t-transparent" />
+        <Loader length={12} />
         <p className="text-xs font-semibold tracking-widest uppercase">
           Initializing CareerCraft Workspace...
         </p>

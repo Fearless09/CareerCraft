@@ -106,7 +106,7 @@ export default function BlogListingPage() {
       {isLoading ? (
         <div className="flex h-50 flex-col items-center justify-center gap-3">
           {/* <Loader2 className="text-accent size-10 animate-spin" /> */}
-          <Loader length={10} />
+          <Loader length={12} />
           <span className="text-xs font-medium text-zinc-500">
             Loading articles...
           </span>

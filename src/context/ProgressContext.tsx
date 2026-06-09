@@ -160,7 +160,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         }
       }, 1000);
     },
-    [isHydrated, status, progress],
+    [isHydrated, status],
   );
 
   const markSectionComplete = (sectionId: string) => {

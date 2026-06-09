@@ -8,11 +8,11 @@ import {
   HelpCircle,
   Sparkles,
   Filter,
-  Loader2,
 } from "lucide-react";
 import { apiRequest, cn } from "../../lib/utils";
 import useSWR from "swr";
 import { Tip } from "@/db/schema";
+import { Loader } from "@/components/shared/Loader";
 
 export default function TipsPage() {
   const { data, isLoading } = useSWR<{ tips: Tip[] }>("/api/tips", apiRequest);
@@ -123,7 +123,7 @@ export default function TipsPage() {
       <>
         {isLoading ? (
           <div className="flex h-64 flex-col items-center justify-center gap-3">
-            <Loader2 className="text-accent size-10 animate-spin" />
+            <Loader length={12} />
             <span className="text-xs font-medium text-zinc-500">
               Loading Cheat Sheets...
             </span>
