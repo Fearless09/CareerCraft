@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ComponentProps, FC, useRef } from "react";
+import { ComponentProps, FC, useRef, useState } from "react";
 import {
   User,
   Mail,
@@ -10,34 +10,47 @@ import {
   Image as ImageIcon,
   Trash2,
 } from "lucide-react";
-import { useResume } from "@/context";
+import { useResume, useUI } from "@/context";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { LinkedInSvg } from "@/components/shared/Svgs";
+import { upload } from "@vercel/blob/client";
 
 export default function PersonalInfoSection() {
   const { resumeData, updatePersonalInfo } = useResume();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const { addToast } = useUI();
 
   const { personalInfo } = resumeData;
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handlePhotoUpload = async (file: File) => {
     // Validate size (max 1.5MB to prevent localstorage bloat)
     if (file.size > 1.5 * 1024 * 1024) {
       alert("Photo is too large. Please select an image under 1.5MB.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === "string") {
-        updatePersonalInfo({ photoUrl: reader.result });
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const fileName = "resume/" + file.name;
+      const newBlob = await upload(fileName, file, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+        onUploadProgress: (progressEvent) => {
+          setUploadProgress(Math.round(progressEvent.percentage));
+        },
+      });
+      updatePersonalInfo({ photoUrl: newBlob.url });
+    } catch (error) {
+      console.error(error);
+      const msg =
+        error instanceof Error
+          ? error.message
+          : "Failed to upload image to Vercel Blob";
+      addToast(msg, "error");
+    } finally {
+      setUploadProgress(null);
+    }
   };
 
   const removePhoto = () => {
@@ -108,11 +121,32 @@ export default function PersonalInfoSection() {
             <input
               type="file"
               ref={fileInputRef}
-              onChange={handlePhotoUpload}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                handlePhotoUpload(file);
+              }}
               accept="image/*"
               className="hidden"
             />
           </div>
+
+          {/* Byte transfer progress bar */}
+          {uploadProgress !== null && (
+            <div className="mt-2 max-w-[250px] space-y-0.5">
+              <div className="flex items-center gap-1 font-mono text-[10px] text-zinc-300">
+                <span>{uploadProgress}%</span>
+                <span>Uploading to Vercel Blob...</span>
+              </div>
+              <div className="h-1 w-full overflow-clip rounded-full bg-zinc-100">
+                <div
+                  className="bg-accent transition-300 h-full rounded-full"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </main>
 

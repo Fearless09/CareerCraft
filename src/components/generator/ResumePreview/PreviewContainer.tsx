@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { ResumeData } from "@/types/resume";
 import { cn } from "@/lib/utils";
+import { Loader } from "@/components/shared/Loader";
 
 const ZOOM_MAX = 1.2;
 const ZOOM_MIN = 0.5;
@@ -206,7 +207,7 @@ export default function PreviewContainer() {
             className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-xs"
           >
             <div className="flex max-w-70 flex-col items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/90 px-6 py-8 text-center backdrop-blur-md">
-              <span className="border-accent size-11 animate-spin rounded-full border-3 border-t-transparent" />
+              <Loader length={12} />
               <div>
                 <p className="text-sm font-semibold">Rendering PDF Engine</p>
                 <p className="mt-1 text-xs text-zinc-500">

@@ -40,96 +40,64 @@ const ProgressContext = createContext<ProgressContextType | undefined>(
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const {
-    data: res,
-    error,
-    isLoading,
-    mutate,
-  } = useSWR<{ progress: UserProgress }, Error>("/api/progress", apiRequest);
 
-  const { status } = useSession();
-  const [progress, setProgress] = useState<UserProgress>(initialProgress);
   const [isHydrated, setIsHydrated] = useState(false);
+  const { status } = useSession();
 
-  // 1. Hydrate states (Authenticated DB fetch or Unauthenticated localStorage)
-  useEffect(() => {
-    if (status === "loading" || isLoading) return;
+  const { data: res, mutate } = useSWR<
+    { progress: UserProgress | null },
+    Error
+  >("/api/progress", apiRequest, {
+    onSuccess: (data) => {
+      if (data.progress) {
+        setIsHydrated(true);
+        return;
+      }
 
-    const hydrate = async () => {
+      // No DB progress found. Check if localData holds actual data to migrate
       const localData = getStorageItem<UserProgress>(
         STORAGE_KEY,
         initialProgress,
       );
+      mutate({ progress: localData }, { revalidate: false });
+      setIsHydrated(true);
 
-      if (status === "authenticated") {
-        try {
-          setIsHydrated(false);
+      const isLocalModified =
+        localData.resumeCompletedSections.length > 0 ||
+        localData.practiceQuestionsAnswered.length > 0 ||
+        localData.bookmarkedQuestions.length > 0 ||
+        localData.blogArticlesRead.length > 0;
 
-          if (error) {
-            const msg =
-              error instanceof Error
-                ? error.message
-                : "Failed to fetch progress from database, falling back to local storage:";
+      if (isLocalModified) {
+        console.log("Migrating local learning progress to cloud database...");
 
-            console.error(msg, error);
-            setProgress({
-              ...localData,
-              lastVisited: new Date().toISOString(),
-            });
-          } else if (res?.progress) {
-            // Found database-stored progress, hydrate
-            setProgress({
-              ...res.progress,
-              lastVisited: new Date().toISOString(),
-            });
-          } else {
-            // No DB progress found. Check if localData holds actual data to migrate
-            const isLocalModified =
-              localData.resumeCompletedSections.length > 0 ||
-              localData.practiceQuestionsAnswered.length > 0 ||
-              localData.bookmarkedQuestions.length > 0 ||
-              localData.blogArticlesRead.length > 0;
-
-            if (isLocalModified) {
-              console.log(
-                "Migrating local learning progress to cloud database...",
-              );
-              await apiRequest<{ success: boolean }>("/api/progress", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ progressData: localData }),
-              });
-              mutate({ progress: localData }, { revalidate: false });
-            }
-            setProgress({
-              ...localData,
-              lastVisited: new Date().toISOString(),
-            });
-          }
-        } catch (error) {
+        apiRequest<{ success: boolean }>("/api/progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ progressData: localData }),
+        }).catch((error) => {
           const msg =
-            error instanceof Error ? error.message : "Something went wrong";
-
+            error instanceof Error
+              ? error.message
+              : "Migration user progress failed";
           console.error(msg, error);
-          setProgress({
-            ...localData,
-            lastVisited: new Date().toISOString(),
-          });
-        } finally {
-          setIsHydrated(true);
-        }
-      } else {
-        // Unauthenticated -> Use localStorage
-        setProgress({
-          ...localData,
-          lastVisited: new Date().toISOString(),
         });
-        setIsHydrated(true);
       }
-    };
+    },
+    onError: (err) => {
+      const msg =
+        err.message || "Error Fetching Progress, falling back to local storage";
+      console.error(msg, err);
 
-    hydrate();
-  }, [status, isLoading]);
+      const localData = getStorageItem<UserProgress>(
+        STORAGE_KEY,
+        initialProgress,
+      );
+      mutate({ progress: localData }, { revalidate: false });
+      setIsHydrated(true);
+    },
+  });
+  const progress: UserProgress = res?.progress || initialProgress;
 
   // 2. Debounced sync to database (if authenticated) and local safety
   const syncProgress = useCallback(
@@ -139,16 +107,17 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       // Cancel the previous pending call ✅
       if (debounceRef.current) clearTimeout(debounceRef.current);
 
+      const updatedProgress = {
+        ...progress,
+        lastVisited: new Date().toISOString(),
+      };
+      mutate({ progress: updatedProgress }, { revalidate: false });
+
       debounceRef.current = setTimeout(async () => {
-        const updatedProgress = {
-          ...progress,
-          lastVisited: new Date().toISOString(),
-        };
         setStorageItem(STORAGE_KEY, updatedProgress);
 
         if (status === "authenticated") {
           try {
-            mutate({ progress: updatedProgress }, { revalidate: false });
             await apiRequest<{ success: boolean }>("/api/progress", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -170,7 +139,6 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       ...progress,
       resumeCompletedSections: [...progress.resumeCompletedSections, sectionId],
     };
-    setProgress(updated);
     syncProgress(updated);
   };
 
@@ -184,7 +152,6 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         questionId,
       ],
     };
-    setProgress(newProgress);
     syncProgress(newProgress);
   };
 
@@ -196,8 +163,6 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         ? progress.bookmarkedQuestions.filter((id) => id !== questionId)
         : [...progress.bookmarkedQuestions, questionId],
     };
-
-    setProgress(updated);
     syncProgress(updated);
   };
 
@@ -208,7 +173,6 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       ...progress,
       blogArticlesRead: [...progress.blogArticlesRead, slug],
     };
-    setProgress(newProgress);
     syncProgress(newProgress);
   };
 
@@ -219,7 +183,6 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         practiceQuestionsAnswered: [],
         bookmarkedQuestions: [],
       };
-      setProgress(newProgress);
       syncProgress(newProgress);
       return;
     }
@@ -241,8 +204,6 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         (id) => !categoryQuestionIds.includes(id),
       ),
     };
-
-    setProgress(newProgress);
     syncProgress(newProgress);
   };
 

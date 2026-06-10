@@ -9,11 +9,10 @@ import {
   AlertCircle,
   ChevronDown,
 } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { apiRequest, cn } from "../../lib/utils";
 import Link from "next/link";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
 type LABEL = {
   value:
     | "feedback"
@@ -119,7 +118,11 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     setErrorMessage("");
 
     try {
-      const res = await fetch("/api/feedback", {
+      const res = await apiRequest<{
+        success: boolean;
+        issueNumber: string;
+        issueUrl: string;
+      }>("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -130,13 +133,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error ?? "Something went wrong.");
-      }
-
-      setIssueUrl(data.issueUrl ?? null);
+      setIssueUrl(res.issueUrl);
       setStatus("success");
     } catch (err) {
       const message =
@@ -148,17 +145,18 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
   const selectedLabel = LABELS.find((l) => l.value === form.label) ?? LABELS[0];
 
-  if (!isOpen) return null;
-
   return (
-    <>
-      {/* Backdrop */}
-      <main
-        className="animate-fade-in fixed inset-0 z-9998 bg-black/40 backdrop-blur-sm"
-        aria-hidden="true"
-        onClick={onClose}
-      />
-
+    <section
+      className={cn(
+        "transition-300 fixed inset-0 z-9998 origin-center overflow-clip bg-black/40 backdrop-blur-sm",
+        {
+          "pointer-events-none opacity-0": !isOpen,
+        },
+      )}
+      aria-label="feedback modal"
+      aria-hidden="true"
+      onClick={onClose}
+    >
       {/* Modal */}
       <section
         ref={dialogRef}
@@ -166,8 +164,8 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         aria-modal="true"
         aria-labelledby="feedback-modal-title"
         className={cn(
-          "animate-fade-in-up fixed inset-x-4 bottom-0 z-9999 mx-auto w-full max-w-sm rounded-t-2xl bg-white shadow-2xl",
-          "sm:inset-x-auto sm:right-6 sm:bottom-6 sm:rounded-2xl",
+          "transition-300 absolute right-0 bottom-0 z-9999 mx-auto max-h-[calc(100dvh-20px)] w-full max-w-sm origin-bottom-right overflow-auto rounded-tl-2xl bg-white shadow-2xl",
+          { "scale-0": !isOpen },
         )}
       >
         {/* Header */}
@@ -431,7 +429,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
           )}
         </main>
       </section>
-    </>
+    </section>
   );
 }
 
