@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useUI } from "@/context/UIContext";
 import PreviewContainer from "@/components/generator/ResumePreview/PreviewContainer";
 import PersonalInfoSection from "@/components/generator/ResumeForm/PersonalInfoSection";
@@ -34,18 +33,16 @@ import { cn } from "@/lib/utils";
 import { Loader } from "@/components/shared/Loader";
 
 export default function GeneratorPage() {
-  const { currentStep, setCurrentStep, clearResume, loadSampleData } =
-    useResume();
-
+  const {
+    currentStep,
+    setCurrentStep,
+    clearResume,
+    loadSampleData,
+    isFetchingResume,
+  } = useResume();
   const { mobilePreviewActive, setMobilePreviewActive, addToast } = useUI();
-  const [mounted, setMounted] = useState(false);
 
-  // Mount check for safe hydration
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
+  if (isFetchingResume) {
     return (
       <section
         id="intializing"

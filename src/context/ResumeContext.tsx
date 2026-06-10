@@ -25,6 +25,7 @@ import { apiRequest } from "@/lib/utils";
 import useSWR from "swr";
 
 interface ResumeContextType {
+  isFetchingResume: boolean;
   resumeData: ResumeData;
   currentStep: number;
   setCurrentStep: (step: number) => void;
@@ -62,119 +63,84 @@ const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 
 export function ResumeProvider({ children }: { children: ReactNode }) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { status } = useSession();
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
   const {
     data: res,
     isLoading,
-    error,
     mutate,
-  } = useSWR<{ resume: ResumeData }, Error>("/api/resume", apiRequest);
+  } = useSWR<{ resume: ResumeData | null }, Error>("/api/resume", apiRequest, {
+    onSuccess: (data) => {
+      if (data.resume) {
+        setIsHydrated(true);
+        return;
+      }
 
-  const { status } = useSession();
-  const [resumeData, setResumeData] = useState<ResumeData>(emptyResume);
+      // No DB resume found. Check if localData holds actual user input and migrate it to DB
+      const localData = getStorageItem<ResumeData>(STORAGE_KEY, emptyResume);
+      mutate({ resume: localData }, { revalidate: false });
+      setIsHydrated(true);
+
+      const isLocalModified =
+        JSON.stringify(localData) !== JSON.stringify(emptyResume) &&
+        JSON.stringify(localData) !== JSON.stringify(sampleResume);
+
+      if (isLocalModified) {
+        console.log("Migrating local draft resume to cloud database...");
+        apiRequest<{ success: boolean }>("/api/resume", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resumeData: localData }),
+        }).catch((err) => {
+          const msg =
+            err instanceof Error
+              ? err.message
+              : "Failed to migrate resume to cloud database";
+          console.error(msg, err);
+        });
+      }
+    },
+    onError: (error) => {
+      const msg =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch resume from database, falling back to local storage:";
+      console.error(msg, error);
+
+      const localData = getStorageItem<ResumeData>(STORAGE_KEY, emptyResume);
+      mutate({ resume: localData }, { revalidate: false });
+      setIsHydrated(true);
+    },
+  });
+
+  const resumeData: ResumeData = res?.resume || emptyResume;
   const [currentStep, setCurrentStepState] = useState<number>(1);
-  const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
   // 1. Hydrate states (Authenticated DB fetch or Unauthenticated localStorage)
   useEffect(() => {
-    if (status === "loading" || isLoading) return;
+    if (!isHydrated) return;
 
-    const hydrate = async () => {
-      // Step indicator is client-only UI state, load from localStorage
-      const storedStep = getStorageItem<number>(STEP_STORAGE_KEY, 1);
-      setCurrentStepState(storedStep);
-
-      const localData = getStorageItem<ResumeData>(STORAGE_KEY, emptyResume);
-
-      if (status === "authenticated") {
-        try {
-          setIsHydrated(false);
-          if (error) {
-            const msg =
-              error instanceof Error
-                ? error.message
-                : "Failed to fetch resume from database, falling back to local storage:";
-
-            console.error(msg, error);
-            setResumeData(localData);
-          } else if (res?.resume) {
-            // Found database-stored resume, use it
-            setResumeData(res.resume);
-          } else {
-            // No DB resume found. Check if localData holds actual user input and migrate it to DB
-            const isLocalModified =
-              JSON.stringify(localData) !== JSON.stringify(emptyResume) &&
-              JSON.stringify(localData) !== JSON.stringify(sampleResume);
-
-            if (isLocalModified) {
-              console.log("Migrating local draft resume to cloud database...");
-              await apiRequest<{ success: boolean }>("/api/resume", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ resumeData: localData }),
-              });
-              mutate({ resume: localData }, { revalidate: false });
-            }
-            setResumeData(localData);
-          }
-        } catch (error) {
-          const msg =
-            error instanceof Error ? error.message : "Something went wrong";
-          console.error(msg, error);
-          setResumeData(localData);
-        } finally {
-          setIsHydrated(true);
-        }
-      } else {
-        // Unauthenticated -> Use localStorage
-        setResumeData(localData);
-        setIsHydrated(true);
-      }
-    };
-
-    hydrate();
-  }, [status, isLoading]);
+    // Step indicator is client-only UI state, load from localStorage
+    const storedStep = getStorageItem<number>(STEP_STORAGE_KEY, 1);
+    setCurrentStepState(storedStep);
+  }, [isHydrated]);
 
   // 2. Debounced sync to database (if authenticated) and local safety net (always)
-  // useEffect(() => {
-  //   if (!isHydrated) return;
-
-  //   const handler = setTimeout(async () => {
-  //     // Always store locally as fallback
-  //     setStorageItem(STORAGE_KEY, resumeData);
-
-  //     if (status === "authenticated") {
-  //       try {
-  //         await apiRequest<{ success: boolean }>("/api/resume", {
-  //           method: "POST",
-  //           headers: { "Content-Type": "application/json" },
-  //           body: JSON.stringify({ resumeData }),
-  //         });
-  //         mutate({ resume: resumeData }, { revalidate: false });
-  //       } catch (error) {
-  //         console.error(
-  //           "Failed to automatically synchronize resume with DB:",
-  //           error,
-  //         );
-  //       }
-  //     }
-  //   }, 1000); // 1000ms debounce to prevent database query overhead
-
-  //   return () => clearTimeout(handler);
-  // }, [resumeData, isHydrated, status]);
-
   const syncResume = useCallback(
     (resume: ResumeData) => {
       if (!isHydrated) return;
 
       // Cancel the previous pending call ✅
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      const update: ResumeData = {
+        ...resume,
+        meta: { ...resume.meta, lastUpdated: new Date().toISOString() },
+      };
+      mutate({ resume: update }, { revalidate: false });
 
       debounceRef.current = setTimeout(async () => {
-        const update: ResumeData = {
-          ...resume,
-          meta: { ...resume.meta, lastUpdated: new Date().toISOString() },
-        };
-
         // Always store locally as fallback
         setStorageItem(STORAGE_KEY, update);
 
@@ -185,7 +151,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ resumeData: update }),
             });
-            mutate({ resume: update }, { revalidate: false });
           } catch (error) {
             console.error(
               "Failed to automatically synchronize resume with DB:",
@@ -209,8 +174,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         ...resumeData,
         personalInfo: { ...resumeData.personalInfo, ...info },
       };
-
-      setResumeData(updated);
       syncResume(updated);
     },
     [resumeData],
@@ -223,8 +186,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         ...resumeData,
         summary,
       };
-
-      setResumeData(updated);
       syncResume(updated);
     },
     [resumeData],
@@ -245,8 +206,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       ...resumeData,
       experience: [...resumeData.experience, newEntry],
     };
-
-    setResumeData(updated);
     syncResume(updated);
   }, [resumeData]);
 
@@ -258,9 +217,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
           item.id === id ? { ...item, ...data } : item,
         ),
       };
-
-      setResumeData(updated);
-      setResumeData(updated);
+      syncResume(updated);
     },
     [resumeData],
   );
@@ -274,8 +231,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         ...resumeData,
         experience: resumeData.experience.filter((item) => item.id !== id),
       };
-
-      setResumeData(updated);
       syncResume(updated);
     },
     [resumeData],
@@ -295,8 +250,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       ...resumeData,
       education: [...resumeData.education, newEntry],
     };
-
-    setResumeData(updated);
     syncResume(updated);
   }, [resumeData]);
 
@@ -311,8 +264,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
           item.id === id ? { ...item, ...data } : item,
         ),
       };
-
-      setResumeData(updated);
       syncResume(updated);
     },
     [resumeData],
@@ -327,8 +278,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         ...resumeData,
         education: resumeData.education.filter((item) => item.id !== id),
       };
-
-      setResumeData(updated);
       syncResume(updated);
     },
     [resumeData],
@@ -346,8 +295,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         ...resumeData,
         skills: { ...resumeData.skills, [category]: tags },
       };
-
-      setResumeData(updated);
       syncResume(updated);
     },
     [resumeData],
@@ -365,8 +312,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       ...resumeData,
       projects: [...resumeData.projects, newEntry],
     };
-
-    setResumeData(updated);
     syncResume(updated);
   }, [resumeData]);
 
@@ -381,8 +326,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
           p.id === id ? { ...p, ...data } : p,
         ),
       };
-
-      setResumeData(update);
       syncResume(update);
     },
     [resumeData],
@@ -397,8 +340,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         ...resumeData,
         projects: resumeData.projects.filter((p) => p.id !== id),
       };
-
-      setResumeData(update);
       syncResume(update);
     },
     [resumeData],
@@ -416,8 +357,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       ...resumeData,
       certifications: [...resumeData.certifications, newEntry],
     };
-
-    setResumeData(update);
     syncResume(update);
   }, [resumeData]);
 
@@ -432,8 +371,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
           c.id === id ? { ...c, ...data } : c,
         ),
       };
-
-      setResumeData(update);
       syncResume(update);
     },
     [resumeData],
@@ -448,8 +385,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         ...resumeData,
         certifications: resumeData.certifications.filter((c) => c.id !== id),
       };
-
-      setResumeData(update);
       syncResume(update);
     },
     [resumeData],
@@ -467,8 +402,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         ...resumeData,
         additionalSections: [...resumeData.additionalSections, newSection],
       };
-
-      setResumeData(update);
       syncResume(update);
     },
     [resumeData],
@@ -487,8 +420,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
           a.id === id ? { ...a, items } : a,
         ),
       };
-
-      setResumeData(update);
       syncResume(update);
     },
     [resumeData],
@@ -507,8 +438,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
           (a) => a.id !== id,
         ),
       };
-
-      setResumeData(update);
       syncResume(update);
     },
     [resumeData],
@@ -522,8 +451,6 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         ...resumeData,
         meta: { ...resumeData.meta, templateId },
       };
-
-      setResumeData(update);
       syncResume(update);
     },
     [resumeData],
@@ -537,26 +464,23 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         ...resumeData,
         meta: { ...resumeData.meta, accentColor },
       };
-
-      setResumeData(update);
       syncResume(update);
     },
     [resumeData],
   );
 
   const clearResume = useCallback(() => {
-    setResumeData(emptyResume);
     syncResume(emptyResume);
   }, [resumeData]);
 
   const loadSampleData = useCallback(() => {
-    setResumeData(sampleResume);
     syncResume(sampleResume);
   }, [resumeData]);
 
   return (
     <ResumeContext.Provider
       value={{
+        isFetchingResume: isLoading,
         resumeData,
         currentStep,
         setCurrentStep,
